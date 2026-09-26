@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: forex-trading
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: forex-db
+          property: connectionString
+      - key: PAYWAVE_API_KEY
+        sync: false
+      - key: PAYWAVE_EMAIL
+        sync: false
+      - key: ALLOWED_ORIGIN
+        value: https://forex-trading.onrender.com
+
+databases:
+  - name: forex-db
+    databaseName: forex_trading
+    user: forex_user
+    plan: free

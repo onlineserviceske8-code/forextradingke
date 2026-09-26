@@ -1,0 +1,23 @@
+{
+  "name": "forex-trading",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A full-stack foreign exchange dashboard with a simulated trading account.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "vercel-build": "echo 'Build complete'"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "server.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "dotenv": "^18.0.4",
+    "pg": "^8.23.0"
+  }
+}

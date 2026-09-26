@@ -1,0 +1,17 @@
+{
+  "buildCommand": "npm install",
+  "outputDirectory": "public",
+  "framework": null,
+  "rewrites": [
+    { "source": "/api/markets", "destination": "/api/markets.js" },
+    { "source": "/api/account", "destination": "/api/account.js" },
+    { "source": "/api/registration/:match*", "destination": "/api/registration.js" },
+    { "source": "/api/watchlist/:match*", "destination": "/api/account.js" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 30
+    }
+  }
+}
