@@ -17,6 +17,19 @@ function normalizePhone(value) {
   return /^254[17]\d{8}$/.test(phone) ? phone : null;
 }
 
+function isPaywaveSuccess(response, result) {
+  if (!response.ok) return false;
+  const code = result.ResponseCode || result.responseCode || result.code || result.resultCode || result.ResultCode;
+  const status = result.status || result.Status || result.responseStatus;
+  const success = result.success || result.Success;
+  const message = result.message || result.Message || result.responseDescription || result.ResponseDescription;
+  
+  return (code === 0 || code === '0' || code === 200 || code === '200') ||
+         (status === 'success' || status === 'Success') ||
+         (success === true || success === 'true' || success === 200 || success === '200') ||
+         (typeof message === 'string' && message.toLowerCase().includes('success'));
+}
+
 async function findRegistrationByEmail(email) {
   const sql = getSql();
   if (!sql) return null;
@@ -173,15 +186,29 @@ module.exports = async (req, res) => {
       if (!apiKey || !email) return res.status(503).json({ error: 'Payments are not configured on the server yet.' });
       const phone = registrant.phone;
       const reference = `FX-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
+      const tillNumber = process.env.PAYWAVE_TILL_NUMBER || '6446427';
+      function isPaywaveSuccess(response, result) {
+    if (!response.ok) return false;
+    const code = result.ResponseCode || result.responseCode || result.code || result.resultCode || result.ResultCode;
+    const status = result.status || result.Status || result.responseStatus;
+    const success = result.success || result.Success;
+    const message = result.message || result.Message || result.responseDescription || result.ResponseDescription;
+    
+    return (code === 0 || code === '0' || code === 200 || code === '200') ||
+           (status === 'success' || status === 'Success') ||
+           (success === true || success === 'true' || success === 200 || success === '200') ||
+           (typeof message === 'string' && message.toLowerCase().includes('success'));
+  }
+
       const response = await fetch('https://paywavexpress.co.ke/v1/stkpush', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ api_key: apiKey, email, amount: '2000', msisdn: phone, reference }),
+        body: JSON.stringify({ api_key: apiKey, email, amount: '2000', msisdn: phone, reference, till_number: tillNumber }),
         signal: AbortSignal.timeout(15000)
       });
       let result;
       try { result = await response.json(); } catch { result = {}; }
-      const accepted = response.ok && (String(result.ResponseCode) === '0' || String(result.success) === '200');
-      if (!accepted) return res.status(502).json({ error: result.errorMessage || result.message || 'The payment provider could not start the STK Push. Try again later.' });
+      const accepted = isPaywaveSuccess(response, result);
+      if (!accepted) return res.status(502).json({ error: result.errorMessage || result.message || result.ResponseDescription || result.responseDescription || 'The payment provider could not start the STK Push. Try again later.' });
       await updateRegistrationPayment(registrant.id, 'pending', reference, result.transaction_request_id || null);
       return res.json({ message: result.message || 'STK Push request sent. Check your phone and complete the M-Pesa prompt.', reference, transactionRequestId: result.transaction_request_id || null });
     } catch (error) {

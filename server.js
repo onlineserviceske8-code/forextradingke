@@ -55,6 +55,19 @@ function json(res, status, payload, extraHeaders={}) {
   res.end(JSON.stringify(payload));
 }
 
+function isPaywaveSuccess(response, result) {
+  if (!response.ok) return false;
+  const code = result.ResponseCode || result.responseCode || result.code || result.resultCode || result.ResultCode;
+  const status = result.status || result.Status || result.responseStatus;
+  const success = result.success || result.Success;
+  const message = result.message || result.Message || result.responseDescription || result.ResponseDescription;
+  
+  return (code === 0 || code === '0' || code === 200 || code === '200') ||
+         (status === 'success' || status === 'Success') ||
+         (success === true || success === 'true' || success === 200 || success === '200') ||
+         (typeof message === 'string' && message.toLowerCase().includes('success'));
+}
+
 function body(req) {
   return new Promise((resolve, reject) => {
     let data = ''; req.on('data', chunk => { data += chunk; if (data.length > 1e6) reject(new Error('Request too large')); });
@@ -134,28 +147,126 @@ const server = http.createServer(async (req, res) => {
         return json(res, 201, { registration:{ id:user.id, fullName:user.fullName, email:user.email }, message:'Registration complete. You can now continue to payment.' }, { 'Set-Cookie':`registration_session=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400${secure}` });
       } catch (error) { return json(res, 400, { error:'Unable to complete registration. Please check your details and try again.' }); }
     }
-    if (req.method === 'POST' && url.pathname === '/api/payments/stkpush') {
+if (req.method === 'POST' && url.pathname === '/api/payments/stkpush') {
       try {
         const registrant = await registrationSession(req);
         if (!registrant) return json(res, 401, { error:'Register first to continue to payment.' });
-        const apiKey = process.env.PAYWAVE_API_KEY, email = process.env.PAYWAVE_EMAIL;
+        const apiKey = process.env.PAYWAVE_API_KEY;
+        const businessId = process.env.PAYWAVE_BUSINESS_ID;
+        const email = process.env.PAYWAVE_EMAIL;
+        const tillNumber = process.env.PAYWAVE_TILL_NUMBER || '6446427';
         if (!apiKey || !email) return json(res, 503, { error:'Payments are not configured on the server yet.' });
+        const input = await body(req);
+        const method = input.method || 'bank'; // Only bank option now
         const phone = registrant.phone;
         const reference = `FX-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
-        const response = await fetch('https://paywavexpress.co.ke/v1/stkpush', {
-          method:'POST', headers:{ 'Content-Type':'application/json' },
-          body:JSON.stringify({ api_key:apiKey, email, amount:'2000', msisdn:phone, reference }),
-          signal:AbortSignal.timeout(15000)
-        });
-        let result;
-        try { result = await response.json(); } catch { result = {}; }
-        const accepted = response.ok && (String(result.ResponseCode) === '0' || String(result.success) === '200');
-        if (!accepted) return json(res, 502, { error:result.errorMessage || result.message || 'The payment provider could not start the STK Push. Try again later.' });
-        await updateRegistrationPayment(registrant.id, 'pending', reference, result.transaction_request_id || null);
-        return json(res, 200, { message:result.message || 'STK Push request sent. Check your phone and complete the M-Pesa prompt.', reference, transactionRequestId:result.transaction_request_id || null });
+        const payload = {
+          api_key: apiKey,
+          business_id: businessId,
+          email,
+          amount: '2000',
+          phone: phone,
+          reference,
+          till_number: tillNumber,
+          payment_method: 'mpesa'
+        };
+        console.log('Paywave STK Push payload:', JSON.stringify(payload));
+        // Try multiple Paywave endpoints
+        const endpoints = [
+          'https://api.paywave.co.ke/stk_push',
+          'https://api.paywave.co.ke/v1/payments/stkpush',
+          'https://api.paywave.co.ke/api/v1/payments/stkpush',
+          'https://api.paywave.co.ke/v1/mpesa/stkpush',
+          'https://api.paywave.co.ke/mpesa/stkpush',
+          'https://api.paywave.co.ke/stkpush',
+          'https://api.paywave.co.ke/api/stkpush',
+          'https://paywave.co.ke/api/stkpush',
+          'https://api.paywave.co.ke/api/v1/stkpush',
+          'https://api.paywave.co.ke/v1/stkpush',
+          'https://api.paywave.co.ke/v2/stkpush',
+          'https://api.paywave.co.ke/v1/transaction/stkpush',
+          'https://api.paywave.co.ke/v1/mpesa',
+          'https://api.paywave.co.ke/mpesa',
+          'https://api.paywave.co.ke/payments'
+        ];
+        let result = null, response = null;
+        for (const endpoint of endpoints) {
+          try {
+            console.log('Trying Paywave endpoint:', endpoint);
+            const ctrl = new AbortController();
+            const to = setTimeout(() => ctrl.abort(), 8000);
+            // Try with api_key in body first
+            response = await fetch(endpoint, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                api_key: process.env.PAYWAVE_API_KEY,
+                business_id: process.env.PAYWAVE_BUSINESS_ID,
+                email: process.env.PAYWAVE_EMAIL,
+                amount: '2000',
+                phone: registrant.phone,
+                reference: `FX-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`,
+                till_number: process.env.PAYWAVE_TILL_NUMBER || '6446427',
+                payment_method: 'mpesa'
+              }),
+              signal: ctrl.signal
+            });
+            clearTimeout(to);
+            const responseText = await response.text();
+            console.log('Paywave response from', endpoint, ':', responseText);
+            try { result = JSON.parse(responseText); } catch { result = { raw: responseText }; }
+            if (isPaywaveSuccess(response, result)) {
+              console.log('Success with Paywave endpoint:', endpoint);
+              break;
+            }
+            // Try with Authorization header if failed
+            console.log('Trying with Authorization header...');
+            const ctrl2 = new AbortController();
+            const to2 = setTimeout(() => ctrl2.abort(), 8000);
+            const response2 = await fetch(endpoint, {
+              method: 'POST', 
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.PAYWAVE_API_KEY}`
+              },
+              body: JSON.stringify({
+                business_id: process.env.PAYWAVE_BUSINESS_ID,
+                email: process.env.PAYWAVE_EMAIL,
+                amount: '2000',
+                phone: registrant.phone,
+                reference: `FX-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`,
+                till_number: process.env.PAYWAVE_TILL_NUMBER || '6446427',
+                payment_method: 'mpesa'
+              }),
+              signal: ctrl2.signal
+            });
+            clearTimeout(to2);
+            const responseText2 = await response2.text();
+            console.log('Paywave response (auth header) from', endpoint, ':', responseText2);
+            try { result = JSON.parse(responseText2); } catch { result = { raw: responseText2 }; }
+            if (isPaywaveSuccess(response2, result)) {
+              console.log('Success with auth header on Paywave endpoint:', endpoint);
+              break;
+            }
+          } catch (e) {
+            console.log('Endpoint failed:', endpoint, e.message);
+            continue;
+          }
+        }
+        if (!result) return json(res, 502, { error: 'All payment endpoints failed' });
+        console.log('Paywave STK Push parsed response:', result);
+        const isSuccess = isPaywaveSuccess(response, result);
+        if (!isSuccess) {
+          let errorMsg = result.message || result.error || result.errorMessage || result.raw || 'The payment provider could not start the STK Push. Try again later.';
+          if (result.raw && (result.raw.includes('404 Not Found') || result.raw.includes('Access denied by Imunify360') || result.raw.includes('Imunify360'))) {
+            errorMsg = 'Payment provider endpoint blocked (Imunify360). Server IP needs to be whitelisted in Paywave firewall. Contact support.';
+          }
+          return json(res, 502, { error: errorMsg });
+        }
+        await updateRegistrationPayment(registrant.id, 'pending', reference, result.transaction_id || result.request_id || result.transaction_request_id || null);
+        return json(res, 200, { message: result.message || 'STK Push request sent. Check your phone and complete the M-Pesa prompt.', reference, transactionRequestId: result.transaction_id || result.request_id || result.transaction_request_id || null, method: 'bank' });
       } catch (error) {
-        const message = error.name === 'TimeoutError' ? 'The payment provider did not respond in time. Check your phone before retrying.' : 'Unable to reach the payment provider. Please try again later.';
-        return json(res, 502, { error:message });
+        const message = error.name === 'AbortError' ? 'Request timed out. Please try again.' : error.name === 'TimeoutError' ? 'The payment provider did not respond in time. Check your phone before retrying.' : 'Unable to reach the payment provider. Please try again later.';
+        return json(res, 502, { error: message });
       }
     }
     if (req.method === 'PATCH' && url.pathname.startsWith('/api/watchlist/')) {
