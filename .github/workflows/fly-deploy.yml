@@ -1,0 +1,30 @@
+# See https://fly.io/docs/app-guides/continuous-deployment-with-github-actions/
+
+name: Fly Deploy
+on:
+  push:
+    branches:
+      - main
+      - master
+jobs:
+  deploy:
+    name: Deploy app
+    runs-on: ubuntu-latest
+    concurrency: deploy-group
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Create PostgreSQL database if not exists
+        run: |
+          if ! flyctl postgres list -a forex-kenya 2>/dev/null | grep -q forex-db; then
+            flyctl postgres create --name forex-db --region jnb --vm-size shared-cpu-1x --volume-size 1 --app forex-kenya --yes
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Attach PostgreSQL database
+        run: flyctl postgres attach forex-db --app forex-kenya
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
