@@ -163,7 +163,6 @@ if (req.method === 'POST' && url.pathname === '/api/payments/stkpush') {
         const method = input.method || 'bank';
         const reference = `FX-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
         const mpesaNumber = '0114097747';
-        const tillNumber = process.env.PAYWAVE_TILL_NUMBER || '6446427';
         const payload = {
           api_key: apiKey,
           business_id: businessId,
