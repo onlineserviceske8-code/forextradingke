@@ -46,7 +46,10 @@ async function registrationSession(req) {
   const token = cookies.registration_session;
   if (!token) return null;
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-  return findRegistrationBySessionTokenHash(tokenHash);
+  console.log('Session lookup:', { token: token.slice(0,8), tokenHash: tokenHash.slice(0,16) });
+  const result = await findRegistrationBySessionTokenHash(tokenHash);
+  console.log('Session result:', result ? { id: result.id, email: result.email, expiresAt: result.sessionExpiresAt } : 'null');
+  return result;
 }
 
 function json(res, status, payload, extraHeaders={}) {
