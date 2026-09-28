@@ -1,17 +1,23 @@
 {
-  "buildCommand": "npm install",
-  "outputDirectory": "public",
-  "framework": null,
+  "services": {
+    "app": {
+      "root": ".",
+      "buildCommand": "npm install",
+      "outputDirectory": "public",
+      "entrypoint": "server.js",
+      "functions": {
+        "api/**/*.js": {
+          "maxDuration": 30
+        }
+      }
+    }
+  },
   "rewrites": [
     { "source": "/api/markets", "destination": "/api/markets.js" },
     { "source": "/api/account", "destination": "/api/account.js" },
     { "source": "/api/registration/:match*", "destination": "/api/registration.js" },
+    { "source": "/api/payments/:match*", "destination": "/api/registration.js" },
     { "source": "/api/watchlist/:match*", "destination": "/api/account.js" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "functions": {
-    "api/**/*.js": {
-      "maxDuration": 30
-    }
-  }
+    { "source": "/(.*)", "destination": { "type": "service", "service": "app" } }
+  ]
 }
