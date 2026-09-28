@@ -282,6 +282,18 @@ if (req.method === 'POST' && url.pathname === '/api/payments/stkpush') {
         await saveAccount(account); return json(res, 200, { watchlist:account.watchlist });
       } catch (error) { return json(res, 400, { error:error.message }); }
     }
+    if (req.method === 'GET' && url.pathname === '/api/debug/db') {
+      const fs = require('node:fs');
+      const path = require('node:path');
+      const dbPath = path.join(__dirname, 'data', 'app.db');
+      return json(res, 200, { 
+        dbPath, 
+        exists: fs.existsSync(dbPath),
+        dirExists: fs.existsSync(path.join(__dirname, 'data')),
+        cwd: process.cwd(),
+        dataDir: path.join(__dirname, 'data')
+      });
+    }
     return json(res, 404, { error:'API route not found.' });
   }
   const requested = decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname);
