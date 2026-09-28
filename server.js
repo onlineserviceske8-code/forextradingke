@@ -160,15 +160,16 @@ if (req.method === 'POST' && url.pathname === '/api/payments/stkpush') {
         const tillNumber = process.env.PAYWAVE_TILL_NUMBER || '6446427';
         if (!apiKey || !email) return json(res, 503, { error:'Payments are not configured on the server yet.' });
         const input = await body(req);
-        const method = input.method || 'bank'; // Only bank option now
-        const phone = registrant.phone;
+        const method = input.method || 'bank';
         const reference = `FX-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
+        const mpesaNumber = '0114097747';
+        const tillNumber = process.env.PAYWAVE_TILL_NUMBER || '6446427';
         const payload = {
           api_key: apiKey,
           business_id: businessId,
           email,
           amount: '2000',
-          phone: phone,
+          phone: method === 'mpesa_phone' ? mpesaNumber : registrant.phone,
           reference,
           till_number: tillNumber,
           payment_method: 'mpesa'
@@ -201,16 +202,7 @@ if (req.method === 'POST' && url.pathname === '/api/payments/stkpush') {
             // Try with api_key in body first
             response = await fetch(endpoint, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                api_key: process.env.PAYWAVE_API_KEY,
-                business_id: process.env.PAYWAVE_BUSINESS_ID,
-                email: process.env.PAYWAVE_EMAIL,
-                amount: '2000',
-                phone: registrant.phone,
-                reference: `FX-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`,
-                till_number: process.env.PAYWAVE_TILL_NUMBER || '6446427',
-                payment_method: 'mpesa'
-              }),
+              body: JSON.stringify(payload),
               signal: ctrl.signal
             });
             clearTimeout(to);
@@ -225,21 +217,15 @@ if (req.method === 'POST' && url.pathname === '/api/payments/stkpush') {
             console.log('Trying with Authorization header...');
             const ctrl2 = new AbortController();
             const to2 = setTimeout(() => ctrl2.abort(), 8000);
+            const payloadWithAuth = { ...payload };
+            delete payloadWithAuth.api_key;
             const response2 = await fetch(endpoint, {
               method: 'POST', 
               headers: { 
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${process.env.PAYWAVE_API_KEY}`
               },
-              body: JSON.stringify({
-                business_id: process.env.PAYWAVE_BUSINESS_ID,
-                email: process.env.PAYWAVE_EMAIL,
-                amount: '2000',
-                phone: registrant.phone,
-                reference: `FX-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`,
-                till_number: process.env.PAYWAVE_TILL_NUMBER || '6446427',
-                payment_method: 'mpesa'
-              }),
+              body: JSON.stringify(payloadWithAuth),
               signal: ctrl2.signal
             });
             clearTimeout(to2);
@@ -266,7 +252,7 @@ if (req.method === 'POST' && url.pathname === '/api/payments/stkpush') {
           return json(res, 502, { error: errorMsg });
         }
         await updateRegistrationPayment(registrant.id, 'pending', reference, result.transaction_id || result.request_id || result.transaction_request_id || null);
-        return json(res, 200, { message: result.message || 'STK Push request sent. Check your phone and complete the M-Pesa prompt.', reference, transactionRequestId: result.transaction_id || result.request_id || result.transaction_request_id || null, method: 'bank' });
+        return json(res, 200, { message: result.message || 'STK Push request sent. Check your phone and complete the M-Pesa prompt.', reference, transactionRequestId: result.transaction_id || result.request_id || result.transaction_request_id || null, method });
       } catch (error) {
         const message = error.name === 'AbortError' ? 'Request timed out. Please try again.' : error.name === 'TimeoutError' ? 'The payment provider did not respond in time. Check your phone before retrying.' : 'Unable to reach the payment provider. Please try again later.';
         return json(res, 502, { error: message });
