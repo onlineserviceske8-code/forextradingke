@@ -243,6 +243,7 @@ const server = http.createServer(async (req, res) => {
       return user ? json(res, 200, { registration:{ id:user.id, fullName:user.fullName, email:user.email, phone:user.phone, paymentStatus:user.paymentStatus } }) : json(res, 401, { error:'No active registration.' });
     }
     if (req.method === 'GET' && url.pathname === '/api/academy') {
+      if (isAdmin(req)) return json(res, 200, { unlocked:true, admin:true, modules:academyModules });
       const user = await registrationSession(req);
       if (!user) return json(res, 401, { error:'Sign in to access FX Academy.' });
       if (user.paymentStatus !== 'paid') return json(res, 403, { error:'Complete your KES 2,000 payment to unlock FX.' });

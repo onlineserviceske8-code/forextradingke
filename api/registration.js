@@ -131,6 +131,18 @@ function verifyAdminToken(token) {
   try { return JSON.parse(Buffer.from(data, 'base64url').toString()).exp > Date.now(); } catch { return false; }
 }
 
+function readCookie(req, name) {
+  const cookieHeader = req.headers.cookie || '';
+  for (const part of cookieHeader.split(';')) {
+    const idx = part.indexOf('=');
+    if (idx === -1) continue;
+    if (part.slice(0, idx).trim() !== name) continue;
+    const value = part.slice(idx + 1).trim();
+    try { return decodeURIComponent(value); } catch { return value; }
+  }
+  return null;
+}
+
 function setCookie(res, token, isProduction) {
   const secure = isProduction ? '; Secure' : '';
   const cookie = token
@@ -160,6 +172,7 @@ module.exports = async (req, res) => {
   }
 
   if (req.method === 'GET' && req.url === '/api/academy') {
+    if (verifyAdminToken(readCookie(req, 'admin_session'))) return res.json({ unlocked: true, admin: true, modules: academyModules });
     if (!token) return res.status(401).json({ error: 'Sign in to access FX Academy.' });
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const user = await findRegistrationBySessionTokenHash(tokenHash);
