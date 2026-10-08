@@ -127,7 +127,7 @@ module.exports = async (req, res) => {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const user = await findRegistrationBySessionTokenHash(tokenHash);
     if (!user) return res.status(401).json({ error: 'Sign in to access FX Academy.' });
-    if (user.paymentStatus !== 'paid') return res.status(403).json({ error: 'Complete your KES 2,000 payment to unlock FX Academy.' });
+    if (user.paymentStatus !== 'paid') return res.status(403).json({ error: 'Complete your KES 2,000 payment to unlock FX.' });
     return res.json({ unlocked: true, modules: academyModules });
   }
 
