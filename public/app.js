@@ -35,10 +35,10 @@ $$('.time-controls button[data-period]').forEach(button=>button.addEventListener
 $$('#fromCurrency,#toCurrency,#convertAmount').forEach(el=>el.addEventListener('input',updateConverter));
 $('#swapCurrencies').addEventListener('click',()=>{const from=$('#fromCurrency'),to=$('#toCurrency'),value=from.value;from.value=to.value;to.value=value;updateConverter()});
 $('#refreshConversion').addEventListener('click',()=>{updateConverter();toast('Conversion rate refreshed')});
-function unlockPayment(registration){$('#registrationForm').hidden=true;$('#loginForm').hidden=true;$('#authSwitch').hidden=true;$('#registrationMessage').textContent='';$('#paymentForm').hidden=false;$('#paymentForm').querySelector('button').disabled=false;$('#paymentPhone').value=registration.phone||'';$('#paymentLock').textContent=`Registered as ${registration.fullName}. Complete payment to activate your account.`;$('#registeredPayer').textContent=`${registration.fullName} · ${registration.email}`;$('#profileName').textContent=registration.fullName;$('#profileStatus').textContent='Awaiting payment';$('#accountMenuEmail').textContent=registration.email;$('#logoutButton').hidden=false;startPaymentPolling(registration.id);}
+function unlockPayment(registration){currentUserId=registration.id||'guest';$('#registrationForm').hidden=true;$('#loginForm').hidden=true;$('#authSwitch').hidden=true;$('#registrationMessage').textContent='';$('#paymentForm').hidden=false;$('#paymentForm').querySelector('button').disabled=false;$('#paymentPhone').value=registration.phone||'';$('#paymentLock').textContent=`Registered as ${registration.fullName}. Complete payment to activate your account.`;$('#registeredPayer').textContent=`${registration.fullName} · ${registration.email}`;$('#profileName').textContent=registration.fullName;$('#profileStatus').textContent='Awaiting payment';$('#accountMenuEmail').textContent=registration.email;$('#logoutButton').hidden=false;startPaymentPolling(registration.id);}
 function startPaymentPolling(userId){if(paymentPollTimer) clearInterval(paymentPollTimer);paymentPollTimer=setInterval(async()=>{try{const res=await api('/api/registration/me');if(res.registration.paymentStatus==='paid'){clearInterval(paymentPollTimer);$('#paymentForm').hidden=true;$('#paymentLock').textContent='Payment confirmed! Account activated.';$('#profileStatus').textContent='Active';$('#academyTab').hidden=false;toast('Payment confirmed. Account activated!');openAcademy();}else if(res.registration.paymentStatus==='pending'){$('#paymentLock').textContent='Payment sent. Waiting for confirmation...';}}catch(e){}},5000);}
 let paymentPollTimer;
-function unlockFullAccess(registration){$('#registrationForm').hidden=true;$('#loginForm').hidden=true;$('#authSwitch').hidden=true;$('#registrationMessage').textContent='';$('#paymentForm').hidden=true;$('#paymentLock').textContent='';$('#profileName').textContent=registration.fullName;$('#profileStatus').textContent='Active';$('#accountMenuEmail').textContent=registration.email;$('#logoutButton').hidden=false;$('#academyTab').hidden=false;openAcademy();}
+function unlockFullAccess(registration){currentUserId=registration.id||'guest';$('#registrationForm').hidden=true;$('#loginForm').hidden=true;$('#authSwitch').hidden=true;$('#registrationMessage').textContent='';$('#paymentForm').hidden=true;$('#paymentLock').textContent='';$('#profileName').textContent=registration.fullName;$('#profileStatus').textContent='Active';$('#accountMenuEmail').textContent=registration.email;$('#logoutButton').hidden=false;$('#academyTab').hidden=false;openAcademy();}
 let authMode='register';
 function applySettings(s){siteSettings={...siteSettings,...s};const amount=Number(siteSettings.paymentAmount).toLocaleString('en-US');document.title=`${siteSettings.siteTitle} — Market overview`;$('#heroTitle').textContent=siteSettings.siteTitle;$('#heroCopy').textContent=siteSettings.siteTagline;$('#registerHeading').textContent=`Create account & pay KES ${amount}`;$('#paymentHeading').textContent=`Pay KES ${amount} via M-Pesa`;$('#depositAmount').textContent=amount;const banner=$('#announcement');if(siteSettings.announcement){banner.textContent=siteSettings.announcement;banner.hidden=false;}else{banner.hidden=true;}const locked=$('#academyLocked');if(locked)locked.textContent=`Complete your KES ${amount} payment to unlock FX.`;}
 function academyVideo(lesson, index) {
@@ -57,27 +57,133 @@ function formatLesson(raw) {
 }
 function quizName(title, i){return 'qz' + (title + ':' + i).split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 1000000007, 7);}
 function renderQuiz(title, questions){
-  return `<div class="academy-quiz"><div class="academy-quiz-head"><span class="academy-quiz-badge">Quiz</span><h4>Check your understanding</h4></div>` +
+  return `<div class="academy-quiz" data-title="${escapeHtml(title)}"><div class="academy-quiz-head"><span class="academy-quiz-badge">Quiz</span><h4>Check your understanding</h4></div>` +
     questions.map((q, i) => { const name = quizName(title, i); return `<div class="quiz-q" data-answer="${q.a}"><p class="quiz-q-text">${escapeHtml(q.q)}</p>${q.o.map((o, j) => `<label class="quiz-opt"><input type="radio" name="${name}" value="${j}"><span>${escapeHtml(o)}</span></label>`).join('')}</div>`; }).join('') +
     `<div class="quiz-actions"><button type="button" class="quiz-submit">Check answers</button><span class="quiz-score" aria-live="polite"></span></div></div>`;
 }
-function academyLessonRow(lesson, index) {
+let academyModules = [];
+let acadFlat = [];
+let playerIndex = -1;
+let playerStep = 'lesson';
+let currentUserId = '';
+let academyPassed = {};
+function progressKey(){ return 'fxke_progress_' + (currentUserId || 'guest'); }
+function loadProgress(){ try { const raw = JSON.parse(localStorage.getItem(progressKey()) || '[]'); const o = {}; if (Array.isArray(raw)) raw.forEach(t => o[t] = true); return o; } catch(e){ return {}; } }
+function saveProgress(){ try { localStorage.setItem(progressKey(), Object.keys(academyPassed)); } catch(e){} }
+function rebuildFlat(modules){ acadFlat = []; modules.forEach((m, mi) => m.lessons.forEach((l, li) => acadFlat.push({ title: l.title, mi, li, index: acadFlat.length }))); }
+function isPassed(title){ return Boolean(academyPassed[title]); }
+function isUnlocked(i){ return i === 0 || isPassed(acadFlat[i - 1].title); }
+function progressCount(){ return acadFlat.filter(f => isPassed(f.title)).length; }
+function nextLearningIndex(){ return acadFlat.findIndex(f => !isPassed(f.title) && isUnlocked(f.index)); }
+function lessonByTitle(title){ return academyModules.flatMap(m => m.lessons).find(l => l.title === title); }
+function lessonBodyHTML(lesson, li){
   const learn = lesson.objective ? `<div class="academy-learn"><span class="academy-learn-label">What you'll learn</span><p class="academy-lesson-learn">${lesson.objective}</p></div>` : '';
   const body = lesson.body ? `<div class="academy-body">${formatLesson(lesson.body)}</div>` : '';
-  const quiz = lesson.quiz && lesson.quiz.length ? renderQuiz(lesson.title, lesson.quiz) : '';
-  return `<li class="academy-lesson"><span class="academy-lesson-no">${String(index + 1).padStart(2, '0')}</span><div class="academy-lesson-body"><div class="academy-lesson-top"><span class="academy-lesson-title"><b>${escapeHtml(lesson.title)}</b><small>${lesson.minutes} min read</small></span><span class="academy-check" aria-hidden="true">✓</span></div>${learn}${body}${academyVideo(lesson, index)}${quiz}</div></li>`;
+  return `<div class="player-lesson-head"><span class="academy-level">${lesson.minutes} min read</span><h3>${escapeHtml(lesson.title)}</h3><p>Step 1 — read the lesson, then take the quiz to continue.</p></div>${learn}${body}${academyVideo(lesson, li)}<div class="player-quiz-wrap" id="playerQuizWrap" hidden></div>`;
 }
-function renderAcademy(modules){const totalLessons=modules.reduce((n,m)=>n+m.lessons.length,0),totalMin=modules.reduce((n,m)=>n+m.lessons.reduce((s,l)=>s+l.minutes,0),0);$('#academyStats').innerHTML=`<div class="academy-stat"><b>${modules.length}</b><span>Modules</span></div><div class="academy-stat"><b>${totalLessons}</b><span>Lessons</span></div><div class="academy-stat"><b>${Math.round(totalMin/60*10)/10}h</b><span>Total time</span></div><div class="academy-stat"><b>Lifetime</b><span>Access</span></div>`;$('#academyModules').innerHTML=modules.map((m,i)=>`<article class="academy-module"><header class="academy-module-head"><div class="academy-module-no">${String(i+1).padStart(2,'0')}</div><div class="academy-module-title"><h3>${escapeHtml(m.title)}</h3><p>${escapeHtml(m.summary)}</p></div><div class="academy-module-meta"><span class="academy-level">${escapeHtml(m.level)}</span><small>${m.lessons.length} lessons · ${m.duration}</small></div></header><ul class="academy-lessons">${m.lessons.map((l,j)=>academyLessonRow(l,j)).join('')}</ul></article>`).join('');}
+function renderSyllabus(){
+  if (!acadFlat.length) return;
+  const total = acadFlat.length, done = progressCount(), nextUp = nextLearningIndex(), pct = Math.round(done / total * 100);
+  const totalMin = academyModules.reduce((n, m) => n + m.lessons.reduce((s, l) => s + l.minutes, 0), 0);
+  $('#academyStats').innerHTML = `<div class="academy-stat"><b>${academyModules.length}</b><span>Modules</span></div><div class="academy-stat"><b>${done}<i class="syl-sub">/${total}</i></b><span>Topics done</span></div><div class="academy-stat"><b>${Math.round(totalMin / 60 * 10) / 10}h</b><span>Total time</span></div><div class="academy-stat"><b>${pct}%</b><span>Complete</span></div>`;
+  const cont = $('#continueBtn');
+  if (done === total) { cont.textContent = 'Course complete — all topics passed ✓'; cont.disabled = true; }
+  else { cont.textContent = nextUp === -1 ? 'Continue learning →' : `Continue: ${acadFlat[nextUp].title} →`; cont.disabled = false; }
+  const row = (l, g) => { const passed = isPassed(l.title), unlocked = isUnlocked(g.index), next = g.index === nextUp; const state = passed ? 'done' : unlocked ? (next ? 'now' : 'open') : 'locked'; const label = passed ? 'Completed' : unlocked ? (next ? 'Start here' : 'Ready to learn') : 'Complete the previous topic'; const icon = passed ? '✓' : unlocked ? '▶' : '🔒'; return `<button class="syl-row ${state}" type="button" data-flat="${g.index}"><span class="syl-no">${String(g.index + 1).padStart(2, '0')}</span><span class="syl-title"><b>${escapeHtml(l.title)}</b><small>${l.minutes} min · ${label}</small></span><span class="syl-go" aria-hidden="true">${icon}</span></button>`; };
+  $('#academyModules').innerHTML = academyModules.map((m, mi) => {
+    const mDone = m.lessons.filter(l => isPassed(l.title)).length;
+    return `<article class="academy-module"><header class="academy-module-head"><div class="academy-module-no">${String(mi + 1).padStart(2, '0')}</div><div class="academy-module-title"><h3>${escapeHtml(m.title)}</h3><p>${escapeHtml(m.summary)}</p></div><div class="academy-module-meta"><span class="academy-level">${escapeHtml(m.level)}</span><small>${mDone}/${m.lessons.length} topics done</small></div></header><ul class="academy-lessons">${m.lessons.map(l => { const g = acadFlat.find(f => f.title === l.title); return row(l, g); }).join('')}</ul></article>`;
+  }).join('');
+}
+function renderAcademy(modules){
+  academyModules = modules;
+  rebuildFlat(modules);
+  academyPassed = loadProgress();
+  showSyllabus();
+}
+function showSyllabus(){
+  renderSyllabus();
+  $('#academyPlayer').hidden = true;
+  $('#academySyllabus').hidden = false;
+  playerIndex = -1;
+  $('#academy').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function openLesson(i){
+  if (i < 0 || i >= acadFlat.length) return;
+  if (!isUnlocked(i)) { toast('Complete the previous topic first to unlock this one.'); return; }
+  playerIndex = i;
+  playerStep = 'lesson';
+  const f = acadFlat[i], m = academyModules[f.mi], lesson = m.lessons[f.li];
+  $('#playerModule').textContent = `Module ${f.mi + 1} · ${m.title}`;
+  $('#playerPosition').textContent = `Topic ${i + 1} of ${acadFlat.length}`;
+  $('#playerContent').innerHTML = lessonBodyHTML(lesson, f.li);
+  $('#playerPrev').hidden = i === 0;
+  $('#playerNext').hidden = false;
+  $('#playerNext').disabled = false;
+  $('#playerNext').textContent = 'Take the quiz →';
+  $('#academySyllabus').hidden = true;
+  $('#academyPlayer').hidden = false;
+  $('#academyPlayer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function stepToQuiz(){
+  const f = acadFlat[playerIndex], lesson = academyModules[f.mi].lessons[f.li];
+  const wrap = $('#playerQuizWrap');
+  wrap.innerHTML = renderQuiz(lesson.title, lesson.quiz || []);
+  wrap.hidden = false;
+  playerStep = 'quiz';
+  if (isPassed(lesson.title)) {
+    $('#playerNext').hidden = false;
+    $('#playerNext').disabled = false;
+    $('#playerNext').textContent = playerIndex === acadFlat.length - 1 ? 'Finish course ✓' : 'Next topic →';
+  } else {
+    $('#playerNext').hidden = true;
+  }
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function resetQuiz(quiz, title){
+  const lesson = lessonByTitle(title);
+  if (!lesson) return;
+  const holder = document.createElement('div');
+  holder.innerHTML = renderQuiz(title, lesson.quiz || []);
+  quiz.replaceWith(holder.firstElementChild);
+}
+function handleNext(){
+  if (playerStep === 'lesson') { stepToQuiz(); return; }
+  if (playerIndex === acadFlat.length - 1) { showSyllabus(); return; }
+  openLesson(playerIndex + 1);
+}
+function handlePrev(){
+  if (playerStep === 'quiz') {
+    playerStep = 'lesson';
+    $('#playerQuizWrap').hidden = true;
+    $('#playerNext').hidden = false;
+    $('#playerNext').disabled = false;
+    $('#playerNext').textContent = 'Take the quiz →';
+    return;
+  }
+  if (playerIndex > 0) openLesson(playerIndex - 1);
+}
 let academyLoaded=false,academyLoading=false;
 async function openAcademy(){const panel=$('#academy');panel.hidden=false;$('#academyLocked').hidden=true;$('#academyBadge').hidden=false;$('#academyClose').hidden=false;$('#academyTitle').textContent='FXKE';panel.scrollIntoView({behavior:'smooth',block:'start'});if(academyLoaded||academyLoading)return;academyLoading=true;$('#academyModules').innerHTML='<p class="academy-loading">Loading your lessons…</p>';try{const data=await api('/api/academy');renderAcademy(data.modules);academyLoaded=true;}catch(error){$('#academyModules').innerHTML='';$('#academyLocked').hidden=false;$('#academyLocked').textContent=error.message;toast(error.message)}finally{academyLoading=false;}}
 function closeAcademy(){$('#academy').hidden=true;academyLoaded=false;}
 $('#academyTab').addEventListener('click',openAcademy);
 $('#academyClose').addEventListener('click',closeAcademy);
 $('#academyModules').addEventListener('click', e => {
+  const row = e.target.closest('.syl-row');
+  if (!row) return;
+  const i = Number(row.dataset.flat);
+  if (!isUnlocked(i)) { toast('Complete the previous topic first to unlock this one.'); return; }
+  openLesson(i);
+});
+$('#academyLessonsView').addEventListener('click', e => {
   const btn = e.target.closest('.quiz-submit');
-  if (!btn || btn.disabled) return;
+  if (!btn) return;
   const quiz = btn.closest('.academy-quiz');
+  if (!quiz || !quiz.dataset.title) return;
+  const title = quiz.dataset.title;
+  if (quiz.dataset.failed === '1') { resetQuiz(quiz, title); return; }
   const questions = [...quiz.querySelectorAll('.quiz-q')];
+  const total = questions.length;
   let correct = 0;
   questions.forEach(qBlock => {
     const name = 'input[name="' + qBlock.querySelector('input').name + '"]';
@@ -91,14 +197,30 @@ $('#academyModules').addEventListener('click', e => {
     });
     if (chosen && Number(chosen.value) === answer) correct++;
   });
-  const total = questions.length;
-  const verdict = correct === total ? 'Perfect! You nailed this lesson.' : correct >= Math.ceil(total / 2) ? 'Good. Review the ones you missed and retake.' : 'Not yet. Re-read the lesson above and retake.';
+  const need = Math.ceil(total / 2);
+  const pass = correct >= need;
   const scoreEl = quiz.querySelector('.quiz-score');
-  scoreEl.textContent = `${correct} of ${total} correct. ${verdict}`;
-  scoreEl.classList.toggle('great', correct === total);
-  btn.disabled = true;
-  btn.textContent = 'Quiz completed';
+  if (pass) {
+    if (!isPassed(title)) { academyPassed[title] = true; saveProgress(); toast('Topic completed — the next one is unlocked!'); }
+    scoreEl.textContent = `${correct} of ${total} correct. ${correct === total ? 'Perfect!' : 'Well done — you passed.'}`;
+    scoreEl.classList.add('great');
+    btn.disabled = true;
+    btn.textContent = correct === total ? 'Perfect score!' : 'Passed';
+    $('#playerNext').hidden = false;
+    $('#playerNext').disabled = false;
+    $('#playerNext').textContent = playerIndex === acadFlat.length - 1 ? 'Finish course ✓' : 'Next topic →';
+  } else {
+    scoreEl.textContent = `You scored ${correct} of ${total}. You need at least ${need} to pass. Review the lesson and retake.`;
+    scoreEl.classList.remove('great');
+    quiz.dataset.failed = '1';
+    btn.textContent = 'Retake quiz';
+    btn.disabled = false;
+  }
 });
+$('#playerNext').addEventListener('click', handleNext);
+$('#playerPrev').addEventListener('click', handlePrev);
+$('#playerBack').addEventListener('click', showSyllabus);
+$('#continueBtn').addEventListener('click', () => { const i = nextLearningIndex(); i === -1 ? showSyllabus() : openLesson(i); });
 $$('.academy-tab-btn').forEach(btn => btn.addEventListener('click', () => {
   $$('.academy-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
   const isSim = btn.dataset.atab === 'simulator';

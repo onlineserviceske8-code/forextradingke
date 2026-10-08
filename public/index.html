@@ -32,9 +32,23 @@
 <button class="academy-tab-btn" data-atab="simulator" type="button">Simulator</button>
 </div>
 <div id="academyLessonsView">
+<div id="academySyllabus">
 <div class="academy-stats" id="academyStats"></div>
+<div class="academy-continue" id="academyContinue"><button id="continueBtn" type="button" class="continue-btn">Continue learning →</button></div>
 <div class="academy-modules" id="academyModules"></div>
 <p class="academy-locked" id="academyLocked">Complete your KES 2,000 payment to unlock FX.</p>
+</div>
+<div class="academy-player" id="academyPlayer" hidden>
+<div class="academy-player-top">
+<button id="playerBack" class="player-back" type="button">← All topics</button>
+<div class="player-breadcrumb"><span id="playerModule"></span><span id="playerPosition"></span></div>
+</div>
+<div id="playerContent"></div>
+<div class="player-nav">
+<button id="playerPrev" class="player-nav-btn" type="button" hidden>← Previous topic</button>
+<button id="playerNext" class="player-nav-btn primary" type="button" hidden>Next topic →</button>
+</div>
+</div>
 </div>
 <div id="academySimView" hidden>
 <div class="sim-intro"><b>Risk-free trading simulator</b><p>Practise buying and selling at live market prices with virtual money. The spread is built into every fill, just like a real broker.</p></div>
