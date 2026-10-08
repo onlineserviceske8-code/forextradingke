@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0b1110">
+  <title>Admin Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin.css">
+</head>
+<body>
+  <main class="admin-shell">
+    <section class="admin-login" id="loginView">
+      <div class="admin-brand"><span class="admin-mark"><i></i><i></i><i></i></span> Admin Control</div>
+      <p class="admin-sub">Sign in to manage the Forex Trading website.</p>
+      <form id="loginForm" autocomplete="on">
+        <label for="adminUser">Username</label>
+        <input id="adminUser" name="username" autocomplete="username" required>
+        <label for="adminPass">Password</label>
+        <input id="adminPass" name="password" type="password" autocomplete="current-password" required>
+        <button type="submit" class="admin-primary">Sign in</button>
+        <p class="admin-msg" id="loginMessage" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="admin-dash" id="dashView" hidden>
+      <header class="admin-topbar">
+        <div class="admin-brand"><span class="admin-mark"><i></i><i></i><i></i></span> Admin Control</div>
+        <div class="admin-top-actions">
+          <a class="admin-link" href="/" target="_blank" rel="noopener">View site ↗</a>
+          <button type="button" class="admin-ghost" id="logoutButton">Sign out</button>
+        </div>
+      </header>
+
+      <div class="admin-body">
+        <div class="admin-panel">
+          <div class="admin-panel-head">
+            <div>
+              <div class="admin-kicker">SITE SETTINGS & TEXTS</div>
+              <h1>Website content</h1>
+            </div>
+          </div>
+          <form id="settingsForm">
+            <label for="siteTitle">Site title</label>
+            <input id="siteTitle" name="siteTitle" maxlength="80">
+            <label for="siteTagline">Tagline / subtitle</label>
+            <input id="siteTagline" name="siteTagline" maxlength="200">
+            <label for="paymentAmount">Registration payment amount (KES)</label>
+            <input id="paymentAmount" name="paymentAmount" type="number" min="1" max="1000000" step="1">
+            <label for="announcement">Announcement banner (optional)</label>
+            <textarea id="announcement" name="announcement" rows="3" maxlength="200" placeholder="Leave blank to hide the banner"></textarea>
+            <div class="admin-actions">
+              <button type="submit" class="admin-primary">Save changes</button>
+              <button type="button" class="admin-ghost" id="reloadButton">Reload</button>
+            </div>
+            <p class="admin-msg" id="settingsMessage" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="/admin.js"></script>
+</body>
+</html>

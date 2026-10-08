@@ -17,6 +17,8 @@
     { "source": "/api/account", "destination": "/api/account.js" },
     { "source": "/api/registration/:match*", "destination": "/api/registration.js" },
     { "source": "/api/payments/:match*", "destination": "/api/registration.js" },
+    { "source": "/api/settings", "destination": "/api/registration.js" },
+    { "source": "/api/admin/:match*", "destination": "/api/registration.js" },
     { "source": "/api/watchlist/:match*", "destination": "/api/account.js" },
     { "source": "/(.*)", "destination": { "type": "service", "service": "app" } }
   ]

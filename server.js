@@ -17,7 +17,9 @@ const {
   findRegistrationByEmail,
   findRegistrationBySessionTokenHash,
   updateRegistrationSession,
-  updateRegistrationPayment
+  updateRegistrationPayment,
+  readSettings,
+  saveSettings
 } = require('./lib/db');
 const academyModules = require('./lib/academy-content');
 
@@ -117,6 +119,36 @@ function isPaywaveSuccess(response, result) {
          (typeof message === 'string' && message.toLowerCase().includes('success'));
 }
 
+function readCookie(req, name) {
+  const cookieHeader = req.headers.cookie || '';
+  for (const part of cookieHeader.split(';')) {
+    const idx = part.indexOf('=');
+    if (idx === -1) continue;
+    if (part.slice(0, idx).trim() !== name) continue;
+    const value = part.slice(idx + 1).trim();
+    try { return decodeURIComponent(value); } catch { return value; }
+  }
+  return null;
+}
+
+function adminConfigured() { return Boolean(process.env.ADMIN_PASSWORD); }
+function adminSecret() { return process.env.ADMIN_SESSION_SECRET || process.env.ADMIN_PASSWORD || ''; }
+function signAdminToken(payload) {
+  const data = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const sig = crypto.createHmac('sha256', adminSecret()).update(data).digest('base64url');
+  return `${data}.${sig}`;
+}
+function verifyAdminToken(token) {
+  if (!token || !adminConfigured() || token.length > 512) return false;
+  const parts = token.split('.');
+  if (parts.length !== 2) return false;
+  const [data, sig] = parts;
+  const expected = crypto.createHmac('sha256', adminSecret()).update(data).digest('base64url');
+  if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return false;
+  try { return JSON.parse(Buffer.from(data, 'base64url').toString()).exp > Date.now(); } catch { return false; }
+}
+function isAdmin(req) { return verifyAdminToken(readCookie(req, 'admin_session')); }
+
 function body(req) {
   return new Promise((resolve, reject) => {
     let data = ''; req.on('data', chunk => { data += chunk; if (data.length > 1e6) reject(new Error('Request too large')); });
@@ -157,6 +189,54 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/api/account') {
       const account = await readAccount();
       return json(res, 200, { watchlist: account.watchlist || [] });
+    }
+    if (req.method === 'GET' && url.pathname === '/api/settings') {
+      const s = await readSettings();
+      return json(res, 200, { settings: { siteTitle: s.siteTitle, siteTagline: s.siteTagline, paymentAmount: s.paymentAmount, announcement: s.announcement } });
+    }
+    if (url.pathname === '/api/admin/login' && req.method === 'POST') {
+      try {
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+        if (isRateLimited(`admin:${ip}`, 8, 60000)) return json(res, 429, { error:'Too many attempts. Please wait a minute.' });
+        if (!adminConfigured()) return json(res, 503, { error:'Admin is not configured on the server.' });
+        const input = await body(req);
+        const username = String(input.username || '').trim();
+        const password = String(input.password || '');
+        const expectedUser = process.env.ADMIN_USERNAME || 'admin';
+        const expectedPass = process.env.ADMIN_PASSWORD || '';
+        const userOk = username.length === expectedUser.length && crypto.timingSafeEqual(Buffer.from(username), Buffer.from(expectedUser));
+        const passOk = password.length === expectedPass.length && expectedPass.length > 0 && crypto.timingSafeEqual(Buffer.from(password), Buffer.from(expectedPass));
+        if (!userOk || !passOk) return json(res, 401, { error:'Invalid admin credentials.' });
+        const token = signAdminToken({ role:'admin', exp: Date.now() + 12 * 60 * 60 * 1000 });
+        const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+        return json(res, 200, { authenticated:true }, { 'Set-Cookie':`admin_session=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=43200${secure}` });
+      } catch { return json(res, 400, { error:'Unable to sign in.' }); }
+    }
+    if (url.pathname === '/api/admin/logout' && req.method === 'POST') {
+      const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+      return json(res, 200, { authenticated:false }, { 'Set-Cookie':`admin_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure}` });
+    }
+    if (url.pathname === '/api/admin/session' && req.method === 'GET') {
+      return json(res, 200, { authenticated: isAdmin(req), configured: adminConfigured() });
+    }
+    if (url.pathname === '/api/admin/settings' && req.method === 'GET') {
+      if (!isAdmin(req)) return json(res, 401, { error:'Admin sign-in required.' });
+      return json(res, 200, { settings: await readSettings() });
+    }
+    if (url.pathname === '/api/admin/settings' && req.method === 'PUT') {
+      if (!isAdmin(req)) return json(res, 401, { error:'Admin sign-in required.' });
+      try {
+        const input = await body(req);
+        const current = await readSettings();
+        const siteTitle = String(input.siteTitle ?? current.siteTitle).trim().slice(0, 80) || current.siteTitle;
+        const siteTagline = String(input.siteTagline ?? current.siteTagline).trim().slice(0, 200);
+        const announcement = String(input.announcement ?? current.announcement).trim().slice(0, 200);
+        const amountNum = Number(input.paymentAmount ?? current.paymentAmount);
+        const paymentAmount = Number.isFinite(amountNum) && amountNum >= 1 && amountNum <= 1000000 ? Math.round(amountNum) : current.paymentAmount;
+        const settings = { siteTitle, siteTagline, paymentAmount, announcement };
+        await saveSettings(settings);
+        return json(res, 200, { settings });
+      } catch { return json(res, 400, { error:'Unable to save settings.' }); }
     }
     if (req.method === 'GET' && url.pathname === '/api/registration/me') {
       const user = await registrationSession(req);
@@ -230,8 +310,9 @@ if (req.method === 'POST' && url.pathname === '/api/payments/stkpush') {
         const phone = normalizePhone(input.phone) || registrant.phone;
         if (!phone) return json(res, 400, { error: 'Enter a valid M-Pesa phone number.' });
         const reference = `FX-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
+        const settings = await readSettings();
         const payload = {
-          amount: 2000,
+          amount: settings.paymentAmount,
           msisdn: phone,
           business_id: Number(businessId),
           reference
