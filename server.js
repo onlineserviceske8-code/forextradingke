@@ -19,6 +19,7 @@ const {
   updateRegistrationSession,
   updateRegistrationPayment
 } = require('./lib/db');
+const academyModules = require('./lib/academy-content');
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC = path.join(__dirname, 'public');
@@ -160,6 +161,12 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/api/registration/me') {
       const user = await registrationSession(req);
       return user ? json(res, 200, { registration:{ id:user.id, fullName:user.fullName, email:user.email, phone:user.phone, paymentStatus:user.paymentStatus } }) : json(res, 401, { error:'No active registration.' });
+    }
+    if (req.method === 'GET' && url.pathname === '/api/academy') {
+      const user = await registrationSession(req);
+      if (!user) return json(res, 401, { error:'Sign in to access FX Academy.' });
+      if (user.paymentStatus !== 'paid') return json(res, 403, { error:'Complete your KES 2,000 payment to unlock FX Academy.' });
+      return json(res, 200, { unlocked:true, modules:academyModules });
     }
     if (req.method === 'POST' && url.pathname === '/api/login') {
       try {
