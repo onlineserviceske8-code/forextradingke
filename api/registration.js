@@ -2,6 +2,8 @@ const crypto = require('crypto');
 const { promisify } = require('util');
 const scrypt = promisify(crypto.scrypt);
 const academyModules = require('../lib/academy-content');
+const quizContent = require('../lib/quiz-content');
+const withQuiz = mods => mods.map(m => ({ ...m, lessons: m.lessons.map(l => ({ ...l, quiz: quizContent[l.title] || null })) }));
 
 const DEFAULT_SETTINGS = { siteTitle:'Forex Trading', siteTagline:'Your clear view of the currency markets.', paymentAmount:2000, announcement:'' };
 
@@ -172,13 +174,13 @@ module.exports = async (req, res) => {
   }
 
   if (req.method === 'GET' && req.url === '/api/academy') {
-    if (verifyAdminToken(readCookie(req, 'admin_session'))) return res.json({ unlocked: true, admin: true, modules: academyModules });
+    if (verifyAdminToken(readCookie(req, 'admin_session'))) return res.json({ unlocked: true, admin: true, modules: withQuiz(academyModules) });
     if (!token) return res.status(401).json({ error: 'Sign in to access FX Academy.' });
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const user = await findRegistrationBySessionTokenHash(tokenHash);
     if (!user) return res.status(401).json({ error: 'Sign in to access FX Academy.' });
     if (user.paymentStatus !== 'paid') return res.status(403).json({ error: 'Complete your KES 2,000 payment to unlock FX.' });
-    return res.json({ unlocked: true, modules: academyModules });
+    return res.json({ unlocked: true, modules: withQuiz(academyModules) });
   }
 
   if (req.method === 'GET' && req.url === '/api/settings') {

@@ -27,9 +27,34 @@
       </section>
       <section class="panel academy-panel" id="academy" hidden>
         <div class="panel-top"><div><div class="section-kicker">FXKE</div><div class="panel-title-row"><h2 id="academyTitle">FXKE</h2><span class="tiny-badge active-only" id="academyBadge" hidden>MEMBERS ONLY</span></div></div><button class="more-btn" id="academyClose" aria-label="Close FXKE" hidden>×</button></div>
-        <div class="academy-stats" id="academyStats"></div>
-        <div class="academy-modules" id="academyModules"></div>
-        <p class="academy-locked" id="academyLocked">Complete your KES 2,000 payment to unlock FX.</p>
+<div class="academy-tabs" id="academyTabs" role="tablist">
+<button class="academy-tab-btn active" data-atab="lessons" type="button">Lessons</button>
+<button class="academy-tab-btn" data-atab="simulator" type="button">Simulator</button>
+</div>
+<div id="academyLessonsView">
+<div class="academy-stats" id="academyStats"></div>
+<div class="academy-modules" id="academyModules"></div>
+<p class="academy-locked" id="academyLocked">Complete your KES 2,000 payment to unlock FX.</p>
+</div>
+<div id="academySimView" hidden>
+<div class="sim-intro"><b>Risk-free trading simulator</b><p>Practise buying and selling at live market prices with virtual money. The spread is built into every fill, just like a real broker.</p></div>
+<div class="sim-balances">
+<div class="sim-bal"><span>Equity</span><b id="simEquity">$1,000.00</b></div>
+<div class="sim-bal"><span>Cash</span><b id="simCash">$1,000.00</b></div>
+<div class="sim-bal"><span>Floating P&amp;L</span><b id="simFloat">+$0.00</b></div>
+<div class="sim-bal"><span>Realized</span><b id="simRealized">+$0.00</b></div>
+</div>
+<form id="simForm" autocomplete="off" class="sim-form">
+<div class="sim-field"><label for="simPair">Pair</label><select id="simPair"><option>Loading…</option></select></div>
+<div class="sim-field"><label for="simDir">Direction</label><select id="simDir"><option value="long">Buy (long)</option><option value="short">Sell (short)</option></select></div>
+<div class="sim-field"><label for="simSize">Size (virtual USD)</label><div class="sim-size-control"><input id="simSize" type="number" min="10" step="10" value="500" inputmode="numeric"><span class="sim-quick"><button type="button" data-size="100">100</button><button type="button" data-size="500">500</button><button type="button" data-size="1000">1,000</button></span></div></div>
+<button class="sim-open" type="submit">Open position</button>
+</form>
+<h4 class="sim-title">Open positions</h4>
+<div id="simPositions"></div>
+<h4 class="sim-title">Trading history</h4>
+<div id="simHistory"></div>
+</div>
       </section>
       <section class="stats-grid" aria-label="Market summary">
         <article class="stat-card"><div class="stat-head"><span>Account balance</span><button aria-label="Account balance info">ⓘ</button></div><div class="stat-value">—</div><div class="stat-foot"><span class="stat-context">Connect a broker to view balance</span><span class="tiny-badge neutral">NOT CONNECTED</span></div><div class="stat-icon balance-icon">▱</div></article>
