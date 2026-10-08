@@ -18,48 +18,60 @@
   html{font-size:16px;-webkit-text-size-adjust:100%}
   body{font-size:15px;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
   button,input,select,textarea{font-size:16px!important;min-height:44px}
+  body.drawer-open{overflow:hidden}
   .sidebar{
-    position:fixed;top:0;left:0;bottom:0;width:180px!important;height:100%;
+    position:fixed;top:0;left:0;bottom:0;width:260px!important;height:100%;
     flex-direction:column;justify-content:flex-start;
-    padding:16px 10px 12px;gap:0;
-    z-index:100;overflow-y:auto;-webkit-overflow-scrolling:touch;
-    border-right:1px solid #27332e
+    padding:20px 15px 14px;gap:0;
+    transform:translateX(-100%);transition:transform .25s ease;
+    z-index:200;border-right:1px solid #27332e;
+    box-shadow:none;overflow-y:auto;-webkit-overflow-scrolling:touch
   }
-  .sidebar .brand{display:flex!important;font-size:15px!important;gap:8px!important;padding:0 4px!important;letter-spacing:-.5px!important}
-  .sidebar .brand>span:last-child{font-size:15px!important}
-  .sidebar .brand-mark{flex:none!important;width:24px!important;height:21px!important}
-  .sidebar .brand-mark i{width:4px!important}
-  .sidebar .workspace{display:flex!important;margin:14px 0 12px!important;padding:8px 7px!important;gap:7px!important}
-  .sidebar .workspace b{font-size:11px!important}
-  .sidebar .workspace small{font-size:9px!important}
-  .sidebar .nav-label{display:block!important;font-size:9px!important;padding:0 6px 7px!important}
-  .sidebar .main-nav{display:grid!important;flex-direction:column!important;gap:2px!important;margin:0!important}
+  .sidebar.open{transform:translateX(0);box-shadow:4px 0 20px rgba(0,0,0,.4)}
+  .sidebar .brand{display:flex!important;font-size:18px!important;gap:9px!important;padding:0 8px!important}
+  .sidebar .brand>span:last-child{font-size:18px!important}
+  .sidebar .brand-mark{flex:none!important}
+  .sidebar .workspace{display:flex!important;margin:18px 1px 14px!important}
+  .sidebar .nav-label{display:block!important;font-size:10px!important}
+  .sidebar .main-nav{display:grid!important;flex-direction:column!important;gap:3px!important;margin:0!important}
   .sidebar .nav-item{
     flex-direction:row!important;justify-content:flex-start!important;align-items:center!important;
-    width:100%!important;height:38px!important;padding:0 8px!important;
-    font-size:12px!important;font-weight:500!important;color:#aab4ad!important;
-    border-radius:5px!important;background:transparent!important;
-    gap:9px!important;text-align:left!important;white-space:nowrap;
-    font-family:var(--font)!important;overflow:hidden;text-overflow:ellipsis
+    width:100%!important;height:44px!important;padding:0 12px!important;
+    font-size:14px!important;font-weight:500!important;color:#aab4ad!important;
+    border-radius:6px!important;background:transparent!important;box-shadow:none!important;
+    gap:12px!important;text-align:left!important;white-space:nowrap;
+    font-family:var(--font)!important
   }
   .sidebar .nav-item.active{
     color:#eff6ee!important;background:#222e29!important;
     box-shadow:inset 2px 0 #b6df77!important
   }
-  .sidebar .nav-ico{font-size:16px!important;width:20px;text-align:center;flex-shrink:0}
-  .sidebar .nav-pill{display:inline!important;margin-left:auto;font-size:9px!important;padding:1px 5px!important;border-radius:8px;background:#222e29;color:#8a9690;flex-shrink:0}
+  .sidebar .nav-ico{font-size:18px!important;width:22px;text-align:center}
+  .sidebar .nav-pill{display:inline!important;margin-left:auto;font-size:11px!important;padding:1px 7px!important;border-radius:10px;background:#222e29;color:#8a9690}
   .sidebar .tools-label{display:block!important}
-  .sidebar .soon-pill{display:inline!important;margin-left:auto;font-size:8px!important;padding:1px 5px!important;border-radius:6px;background:#2a3d33;color:#b6df77;flex-shrink:0}
-  .sidebar .sidebar-bottom{display:block!important;margin-top:auto;padding-top:12px}
-  .sidebar .help-card{display:none!important}
-  .sidebar .profile{display:flex!important;padding:7px 6px!important;gap:7px!important;border-radius:5px!important}
-  .sidebar .profile b{display:block!important;font-size:10px!important}
-  .sidebar .profile small{display:block!important;font-size:9px!important}
-  .sidebar .avatar{width:24px!important;height:24px!important;font-size:9px!important}
+  .sidebar .soon-pill{display:inline!important;margin-left:auto;font-size:9px!important;padding:2px 6px!important;border-radius:8px;background:#2a3d33;color:#b6df77}
+  .sidebar .sidebar-bottom{display:block!important;margin-top:auto;padding-top:16px}
+  .sidebar .help-card{display:block!important}
+  .sidebar .profile{display:flex!important;padding:10px 8px!important}
+  .sidebar .profile b,.sidebar .profile small{display:block!important}
+  .sidebar .avatar{width:28px!important;height:28px!important}
   .sidebar .more{display:block!important}
-  .sidebar .account-menu{left:4px!important;right:4px!important;bottom:56px!important}
-  .hamburger,.sidebar-backdrop{display:none!important}
-  .main-area{margin-left:180px!important;padding-bottom:20px}
+  .sidebar-backdrop{
+    position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:190;
+    display:block;animation:fadeIn .2s ease
+  }
+  .sidebar-backdrop[hidden]{display:none}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .hamburger{
+    display:flex!important;flex-direction:column;justify-content:center;align-items:center;
+    gap:5px;width:44px;height:44px;background:none;border:none;
+    padding:0;cursor:pointer;flex-shrink:0;margin-right:6px
+  }
+  .hamburger span{
+    display:block;width:22px;height:2px;background:var(--ink);
+    border-radius:2px;transition:transform .2s,opacity .2s
+  }
+  .main-area{margin-left:0!important}
   .topbar{padding:0 12px!important;height:48px!important;display:flex!important;align-items:center!important}
   .page-wrap{padding:12px 10px!important}
   .welcome-row{display:flex!important;align-items:center!important;justify-content:space-between}
@@ -154,13 +166,13 @@
   .mover-change{font-size:13px!important}
   .page-footer{font-size:11px!important;padding:12px 0!important}
   .toast{
-    left:192px!important;right:12px!important;
-    bottom:16px!important;top:auto!important;
-    text-align:center;font-size:13px!important;
-    padding:11px 14px!important;border-radius:7px!important;
-    z-index:200!important
+    left:12px!important;right:12px!important;
+    bottom:20px!important;top:auto!important;
+    text-align:center;font-size:14px!important;
+    padding:12px 16px!important;border-radius:8px!important;
+    z-index:210!important
   }
-  .account-menu{bottom:56px!important}
+  .account-menu{bottom:70px!important;left:12px!important;right:12px!important}
   .account-menu span{font-size:12px!important}
   .account-menu button{min-height:42px;font-size:13px!important}
   .chart-panel{min-height:280px!important}
@@ -183,28 +195,14 @@
   .top-avatar{width:32px;height:32px;font-size:12px}
 }
 @media(max-width:400px){
-  .sidebar{width:56px!important;padding:12px 6px 8px!important}
-  .sidebar .brand>span:last-child,.sidebar .workspace>span:not(.workspace-icon),.sidebar .workspace .chevron,
-  .sidebar .nav-label,.sidebar .nav-item span:not(.nav-ico):not(.nav-pill):not(.soon-pill),
-  .sidebar .nav-pill,.sidebar .soon-pill,
-  .sidebar .profile>span:not(.avatar),.sidebar .more{display:none!important}
-  .sidebar .brand{justify-content:center!important;padding:0!important}
-  .sidebar .workspace{justify-content:center!important;padding:6px!important}
-  .sidebar .workspace-icon{width:26px!important;height:26px!important}
-  .sidebar .nav-item{justify-content:center!important;padding:0!important;gap:0!important}
-  .sidebar .nav-ico{font-size:18px!important;width:auto}
-  .sidebar .profile{justify-content:center!important;padding:6px!important}
-  .sidebar .avatar{width:26px!important;height:26px!important}
-  .main-area{margin-left:56px!important}
-  .page-wrap{padding:8px 6px!important}
-  .panel{padding:10px 8px!important}
+  .page-wrap{padding:10px 8px!important}
+  .panel{padding:12px 10px!important}
   .stats-grid{gap:6px!important}
-  .stat-card{padding:8px!important;min-height:80px}
-  .stat-value{font-size:18px!important}
-  .welcome-row h1{font-size:18px!important}
-  .onboarding-content h2{font-size:15px!important}
-  .onboarding-cta{font-size:13px!important;height:44px!important}
+  .stat-card{padding:10px!important;min-height:90px}
+  .stat-value{font-size:20px!important}
+  .welcome-row h1{font-size:20px!important}
+  .onboarding-content h2{font-size:16px!important}
+  .onboarding-cta{font-size:14px!important;height:46px!important}
   .payment-form input{height:44px!important;font-size:16px!important}
-  .table-scroll{margin:0 -8px;padding:0 8px}
-  .toast{left:64px!important;right:8px!important}
+  .table-scroll{margin:0 -10px;padding:0 10px}
 }
