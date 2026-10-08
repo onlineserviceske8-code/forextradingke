@@ -153,8 +153,8 @@ function isAdmin(req) { return verifyAdminToken(readCookie(req, 'admin_session')
 
 function body(req) {
   return new Promise((resolve, reject) => {
-    let data = ''; req.on('data', chunk => { data += chunk; if (data.length > 1e6) { reject(new Error('Request too large')); req.unpipe && req.unpipe(); req.destroy && req.destroy(); return; } });
-    req.on('end', () => { try { resolve(JSON.parse(data || '{}')); } catch (err) { console.error('[body] invalid json, len=' + data.length); reject(new Error('Invalid JSON: ' + err.message)); } });
+    let data = ''; req.on('data', chunk => { data += chunk; if (data.length > 1e6) reject(new Error('Request too large')); });
+    req.on('end', () => { try { resolve(JSON.parse(data || '{}')); } catch { reject(new Error('Invalid JSON')); } });
   });
 }
 
@@ -212,7 +212,7 @@ const server = http.createServer(async (req, res) => {
         const token = signAdminToken({ role:'admin', exp: Date.now() + 12 * 60 * 60 * 1000 });
         const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
         return json(res, 200, { authenticated:true }, { 'Set-Cookie':`admin_session=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=43200${secure}` });
-      } catch (error) { console.error('[admin-login]', error && error.stack || error); return json(res, 400, { error:'Unable to sign in.' }); }
+      } catch { return json(res, 400, { error:'Unable to sign in.' }); }
     }
     if (url.pathname === '/api/admin/logout' && req.method === 'POST') {
       const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
@@ -372,7 +372,7 @@ if (req.method === 'POST' && url.pathname === '/api/payments/stkpush') {
 });
 
 initDb().then(() => {
-  server.listen(PORT, () => console.log(`Forex Trading is running at http://localhost:${PORT} (node ${process.version}, ADMIN_USERNAME len=${String(process.env.ADMIN_USERNAME||'').length})`));
+  server.listen(PORT, () => console.log(`Forex Trading is running at http://localhost:${PORT}`));
 }).catch(err => {
   console.error('Failed to initialize database:', err);
   process.exit(1);
