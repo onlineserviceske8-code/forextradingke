@@ -18,24 +18,31 @@
   body{font-size:15px;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
   button,input,select,textarea{font-size:16px!important;min-height:44px}
   .sidebar{
-    position:fixed;top:auto;bottom:0;left:0;right:0;width:100%;height:58px;
-    flex-direction:row;align-items:center;padding:0;
+    position:fixed;top:auto;bottom:0;left:0;right:0;width:100%;height:60px;
+    flex-direction:row;align-items:center;justify-content:flex-start;
+    padding:0 4px;gap:0;
     border-top:1px solid #27332e;z-index:100;
-    box-shadow:0 -2px 10px rgba(0,0,0,.3)
+    box-shadow:0 -2px 10px rgba(0,0,0,.3);
+    overflow-x:auto;-webkit-overflow-scrolling:touch
   }
-  .sidebar .brand,.sidebar .workspace,.sidebar .nav-label,.sidebar .sidebar-bottom{display:none}
-  .sidebar .main-nav{display:flex;flex:1;justify-content:space-around;margin:0!important;gap:0}
+  .sidebar .brand,.sidebar .workspace,.sidebar .nav-label,.sidebar .sidebar-bottom{display:none!important}
+  .sidebar .main-nav{display:flex;flex:0 0 auto;flex-direction:row;margin:0!important;gap:0}
+  .sidebar .main-nav+.main-nav{border-left:1px solid #27332e}
   .sidebar .nav-item{
-    flex-direction:column;justify-content:center;gap:2px;
-    width:auto!important;height:58px;padding:0 8px;
-    font-size:10px!important;color:#8a9690;border-radius:0;
-    background:transparent!important;box-shadow:none!important
+    flex-direction:column;justify-content:center;align-items:center;gap:3px;
+    width:58px!important;min-width:58px;height:60px;padding:0 2px;
+    font-size:10px!important;font-weight:500;color:#8a9690;border-radius:0;
+    background:transparent!important;box-shadow:none!important;
+    text-align:center;line-height:1.1;white-space:nowrap;overflow:hidden;
+    font-family:var(--font)!important
   }
   .sidebar .nav-item.active{color:#b6df77!important;box-shadow:none!important;background:rgba(182,223,119,.08)!important}
-  .sidebar .nav-ico{font-size:20px!important}
-  .main-area{margin-left:0!important;padding-bottom:70px}
+  .sidebar .nav-ico{font-size:20px!important;line-height:1}
+  .sidebar .nav-pill,.sidebar .soon-pill,.sidebar .tools-label{display:none!important}
+  .main-area{margin-left:0!important;padding-bottom:76px}
   .topbar{padding:0 14px!important;height:52px!important}
   .page-wrap{padding:14px 12px!important}
+  .welcome-row{display:flex!important;align-items:center!important;justify-content:space-between}
   .welcome-row h1{font-size:24px!important}
   .welcome-copy{font-size:13px!important}
   .date-button{font-size:12px!important;padding:8px 10px!important;min-height:40px}
@@ -68,22 +75,35 @@
   .account-switch button{font-size:14px!important;min-height:44px;padding:0 8px}
   .funding-note{font-size:12px!important;line-height:1.7!important}
   .stats-grid{grid-template-columns:1fr 1fr!important;gap:8px!important}
-  .stat-card{height:auto!important;min-height:100px;padding:14px!important}
+  .stat-card{height:auto!important;min-height:100px;padding:14px!important;position:relative;overflow:hidden}
   .stat-card:last-child{grid-column:span 2}
-  .stat-value{font-size:24px!important}
-  .stat-head span{font-size:13px!important}
-  .stat-foot .stat-context{font-size:11px!important}
+  .stat-value{font-size:24px!important;color:var(--ink)}
+  .stat-head span{font-size:13px!important;color:var(--muted)}
+  .stat-head button{min-width:36px;min-height:36px;background:none;border:none;color:var(--muted);font-size:14px}
+  .stat-foot .stat-context{font-size:11px!important;color:var(--muted)}
+  .tiny-badge{font-size:10px!important;padding:3px 7px!important}
+  .stat-icon{opacity:.15!important;font-size:32px!important;right:10px!important;bottom:8px!important}
   .content-grid,.lower-grid{grid-template-columns:1fr!important;gap:12px!important}
-  .panel{padding:16px 14px!important}
-  .panel-title-row h2{font-size:17px!important}
-  .chart-toolbar{flex-direction:column!important;gap:8px!important}
-  .time-controls{position:static!important;display:flex;gap:6px;flex-wrap:wrap}
-  .time-controls button{min-height:36px;padding:0 12px!important;font-size:13px!important;border-radius:6px}
+  .panel{padding:16px 14px!important;overflow:visible!important}
+  .panel-top{flex-wrap:wrap!important;gap:8px!important}
+  .panel-title-row{flex-wrap:wrap!important;gap:6px!important}
+  .panel-title-row h2{font-size:17px!important;color:var(--ink)}
+  .section-kicker{font-size:11px!important;letter-spacing:.8px!important}
+  .chart-toolbar{flex-direction:column!important;gap:8px!important;align-items:stretch!important}
+  .selected-pair{flex-wrap:wrap!important;gap:8px!important}
+  .time-controls{position:static!important;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start}
+  .time-controls button{min-height:36px;padding:0 12px!important;font-size:13px!important;border-radius:6px;border:1px solid var(--line);background:#fff;color:var(--ink)}
+  .time-controls button.selected{background:var(--navy);color:#fff;border-color:var(--navy)}
   .chart-price{font-size:22px!important;margin-left:0!important}
   .chart-change{font-size:14px!important}
+  .chart-plot{min-height:200px;position:relative}
+  .chart-plot canvas{width:100%!important;height:100%!important;display:block}
+  .axis-labels{display:none!important}
+  .chart-tooltip{display:none!important}
+  .chart-bottom-labels{font-size:10px!important}
   .chart-footer{font-size:11px!important;flex-wrap:wrap;gap:8px!important}
   .chart-footer span{font-size:11px!important}
-  .chart-plot{min-height:200px}
+  .more-btn{min-width:40px;min-height:40px;font-size:16px;background:none;border:none;color:var(--muted)}
   .markets-header{display:block!important;padding-bottom:10px}
   .market-actions{display:flex!important;flex-wrap:wrap;gap:8px!important;margin-top:10px!important}
   .search-box{width:100%!important;min-height:44px}
@@ -116,11 +136,12 @@
   .page-footer{font-size:12px!important;padding:14px 0!important}
   .toast{
     left:12px!important;right:12px!important;
-    bottom:70px!important;top:auto!important;
+    bottom:76px!important;top:auto!important;
     text-align:center;font-size:14px!important;
-    padding:12px 16px!important;border-radius:8px!important
+    padding:12px 16px!important;border-radius:8px!important;
+    z-index:200!important
   }
-  .account-menu{bottom:66px!important;left:12px!important;right:12px!important}
+  .account-menu{bottom:70px!important;left:12px!important;right:12px!important}
   .account-menu span{font-size:13px!important}
   .account-menu button{min-height:44px;font-size:14px!important}
   .help-card{display:none}
@@ -130,6 +151,20 @@
   .live-label,.indicative-label{font-size:11px!important}
   .market-count{font-size:12px!important}
   .eyebrow{font-size:11px!important}
+  .pulse-summary{flex-wrap:wrap!important;gap:8px!important}
+  .pulse-summary span{font-size:13px!important}
+  .sentiment-meter{height:8px!important;border-radius:4px!important}
+  .sentiment-scale{font-size:11px!important}
+  .movers-heading{font-size:12px!important}
+  .text-link{font-size:13px!important;min-height:44px;display:inline-flex;align-items:center}
+  .empty-position{font-size:13px!important;padding:20px 10px!important;text-align:center}
+  .empty-icon{font-size:28px!important;display:block;margin-bottom:8px}
+  .divider{margin:14px 0!important}
+  .positions-list{padding:10px 0}
+  .portfolio-panel .panel-top{margin-bottom:8px}
+  .tools-label,.nav-pill,.soon-pill{display:none!important}
+  .icon-btn{min-width:44px;min-height:44px;font-size:18px;background:none;border:none;color:var(--muted);position:relative}
+  .top-avatar{width:34px;height:34px;font-size:13px}
 }
 @media(max-width:400px){
   .page-wrap{padding:10px 8px!important}
