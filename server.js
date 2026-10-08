@@ -23,6 +23,33 @@ const {
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC = path.join(__dirname, 'public');
 
+const rateLimits = new Map();
+function isRateLimited(key, max, windowMs) {
+  const now = Date.now();
+  const entry = rateLimits.get(key) || { count: 0, resetAt: now + windowMs };
+  if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + windowMs; }
+  entry.count++;
+  rateLimits.set(key, entry);
+  return entry.count > max;
+}
+setInterval(() => { const now = Date.now(); for (const [k, v] of rateLimits) { if (now > v.resetAt) rateLimits.delete(k); } }, 60000);
+
+const failedLogins = new Map();
+function isLoginLocked(email) {
+  const entry = failedLogins.get(email);
+  if (!entry) return false;
+  if (Date.now() > entry.resetAt) { failedLogins.delete(email); return false; }
+  return entry.count >= 5;
+}
+function recordFailedLogin(email) {
+  const now = Date.now();
+  const entry = failedLogins.get(email) || { count: 0, resetAt: now + 15 * 60000 };
+  if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + 15 * 60000; }
+  entry.count++;
+  failedLogins.set(email, entry);
+}
+function clearFailedLogins(email) { failedLogins.delete(email); }
+
 const pairs = [
   { symbol:'EUR/USD', base:'EUR', quote:'USD', name:'Euro / US Dollar', price:1.08432, change:0.42, spread:0.8, flag:'🇪🇺' },
   { symbol:'GBP/USD', base:'GBP', quote:'USD', name:'British Pound / US Dollar', price:1.27186, change:-0.18, spread:1.1, flag:'🇬🇧' },
@@ -42,19 +69,37 @@ function normalizePhone(value) {
 }
 
 async function registrationSession(req) {
-  const cookies = Object.fromEntries((req.headers.cookie || '').split(';').map(part => part.trim().split('=').map(decodeURIComponent)));
+  const cookieHeader = req.headers.cookie || '';
+  const cookies = {};
+  for (const part of cookieHeader.split(';')) {
+    const idx = part.indexOf('=');
+    if (idx === -1) continue;
+    const k = part.slice(0, idx).trim();
+    const v = part.slice(idx + 1).trim();
+    try { cookies[k] = decodeURIComponent(v); } catch { cookies[k] = v; }
+  }
   const token = cookies.registration_session;
-  if (!token) return null;
+  if (!token || token.length > 128) return null;
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-  console.log('Session lookup:', { token: token.slice(0,8), tokenHash: tokenHash.slice(0,16) });
   const result = await findRegistrationBySessionTokenHash(tokenHash);
-  console.log('Session result:', result ? { id: result.id, email: result.email, expiresAt: result.sessionExpiresAt } : 'null');
   return result;
 }
 
 function json(res, status, payload, extraHeaders={}) {
-  const allowedOrigin = process.env.ALLOWED_ORIGIN || '*';
-  res.writeHead(status, { 'Content-Type':'application/json; charset=utf-8', 'Cache-Control':'no-store', 'Access-Control-Allow-Origin':allowedOrigin, 'Access-Control-Allow-Credentials':'true', ...extraHeaders });
+  const allowedOrigin = process.env.ALLOWED_ORIGIN || 'https://forex-kenya.fly.dev';
+  res.writeHead(status, {
+    'Content-Type':'application/json; charset=utf-8',
+    'Cache-Control':'no-store',
+    'Access-Control-Allow-Origin':allowedOrigin,
+    'Access-Control-Allow-Credentials':'true',
+    'X-Content-Type-Options':'nosniff',
+    'X-Frame-Options':'DENY',
+    'X-XSS-Protection':'1; mode=block',
+    'Referrer-Policy':'strict-origin-when-cross-origin',
+    'Strict-Transport-Security':'max-age=31536000; includeSubDomains',
+    'Permissions-Policy':'camera=(), microphone=(), geolocation=()',
+    ...extraHeaders
+  });
   res.end(JSON.stringify(payload));
 }
 
@@ -80,14 +125,23 @@ function body(req) {
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-  const allowedOrigin = process.env.ALLOWED_ORIGIN || '*';
+  const allowedOrigin = process.env.ALLOWED_ORIGIN || 'https://forex-kenya.fly.dev';
+  const securityHeaders = {
+    'X-Content-Type-Options':'nosniff',
+    'X-Frame-Options':'DENY',
+    'X-XSS-Protection':'1; mode=block',
+    'Referrer-Policy':'strict-origin-when-cross-origin',
+    'Strict-Transport-Security':'max-age=31536000; includeSubDomains',
+    'Permissions-Policy':'camera=(), microphone=(), geolocation=()'
+  };
   if (req.method === 'OPTIONS' && url.pathname.startsWith('/api/')) {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': allowedOrigin,
       'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Allow-Credentials': 'true',
-      'Access-Control-Max-Age': '86400'
+      'Access-Control-Max-Age': '86400',
+      ...securityHeaders
     });
     return res.end();
   }
@@ -109,11 +163,15 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && url.pathname === '/api/login') {
       try {
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+        if (isRateLimited(`login:${ip}`, 10, 60000)) return json(res, 429, { error:'Too many attempts. Please wait a minute.' });
         const input = await body(req), email = String(input.email || '').trim().toLowerCase(), password = String(input.password || '');
+        if (isLoginLocked(email)) return json(res, 429, { error:'Account temporarily locked. Try again later.' });
         const user = await findRegistrationByEmail(email);
-        if (!user || password.length > 128) return json(res, 401, { error:'Email or password is incorrect.' });
+        if (!user || password.length > 128) { if (email) recordFailedLogin(email); return json(res, 401, { error:'Email or password is incorrect.' }); }
         const candidate = await scrypt(password, user.passwordSalt, 64), expected = Buffer.from(user.passwordHash, 'hex');
-        if (candidate.length !== expected.length || !crypto.timingSafeEqual(candidate, expected)) return json(res, 401, { error:'Email or password is incorrect.' });
+        if (candidate.length !== expected.length || !crypto.timingSafeEqual(candidate, expected)) { recordFailedLogin(email); return json(res, 401, { error:'Email or password is incorrect.' }); }
+        clearFailedLogins(email);
         const token = crypto.randomBytes(32).toString('hex');
         const sessionTokenHash = crypto.createHash('sha256').update(token).digest('hex');
         const sessionExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
@@ -132,6 +190,8 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && url.pathname === '/api/register') {
       try {
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+        if (isRateLimited(`register:${ip}`, 5, 60000)) return json(res, 429, { error:'Too many attempts. Please wait a minute.' });
         const input = await body(req);
         const fullName = String(input.fullName || '').trim(), email = String(input.email || '').trim().toLowerCase();
         const phone = normalizePhone(input.phone), password = String(input.password || '');
@@ -152,6 +212,8 @@ const server = http.createServer(async (req, res) => {
     }
 if (req.method === 'POST' && url.pathname === '/api/payments/stkpush') {
       try {
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+        if (isRateLimited(`stk:${ip}`, 3, 60000)) return json(res, 429, { error:'Too many payment attempts. Please wait a minute.' });
         const registrant = await registrationSession(req);
         if (!registrant) return json(res, 401, { error:'Register first to continue to payment.' });
         const apiKey = process.env.LIPAWIN_API_KEY;
@@ -195,6 +257,8 @@ if (req.method === 'POST' && url.pathname === '/api/payments/stkpush') {
     }
     if (req.method === 'PATCH' && url.pathname.startsWith('/api/watchlist/')) {
       try {
+        const user = await registrationSession(req);
+        if (!user) return json(res, 401, { error:'Sign in to manage your watchlist.' });
         const symbol = decodeURIComponent(url.pathname.split('/').pop());
         if (!pairs.some(p => p.symbol === symbol)) return json(res, 404, { error:'Currency pair not found.' });
         const input = await body(req), account = await readAccount();
@@ -203,26 +267,16 @@ if (req.method === 'POST' && url.pathname === '/api/payments/stkpush') {
         await saveAccount(account); return json(res, 200, { watchlist:account.watchlist });
       } catch (error) { return json(res, 400, { error:error.message }); }
     }
-    if (req.method === 'GET' && url.pathname === '/api/debug/db') {
-      const fs = require('node:fs');
-      const path = require('node:path');
-      const dbPath = path.join(__dirname, 'data', 'app.db');
-      return json(res, 200, { 
-        dbPath, 
-        exists: fs.existsSync(dbPath),
-        dirExists: fs.existsSync(path.join(__dirname, 'data')),
-        cwd: process.cwd(),
-        dataDir: path.join(__dirname, 'data')
-      });
-    }
     return json(res, 404, { error:'API route not found.' });
   }
   const requested = decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname);
+  if (requested.includes('\0')) { res.writeHead(400); return res.end('Bad request'); }
   const file = path.resolve(PUBLIC, `.${requested}`);
   if (!file.startsWith(PUBLIC + path.sep)) { res.writeHead(403); return res.end('Forbidden'); }
   fs.readFile(file, (error, content) => {
-    if (error) { res.writeHead(404, { 'Content-Type':'text/plain; charset=utf-8' }); return res.end('Not found'); }
-    res.writeHead(200, { 'Content-Type':mime[path.extname(file)] || 'application/octet-stream', 'Cache-Control':'no-cache' }); res.end(content);
+    if (error) { res.writeHead(404, { 'Content-Type':'text/plain; charset=utf-8', ...securityHeaders }); return res.end('Not found'); }
+    const csp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'";
+    res.writeHead(200, { 'Content-Type':mime[path.extname(file)] || 'application/octet-stream', 'Cache-Control':'no-cache', 'Content-Security-Policy':csp, ...securityHeaders }); res.end(content);
   });
 });
 
