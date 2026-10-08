@@ -160,15 +160,15 @@ if (req.method === 'POST' && url.pathname === '/api/payments/stkpush') {
         const tillNumber = process.env.PAYWAVE_TILL_NUMBER || '6446427';
         if (!apiKey || !email) return json(res, 503, { error:'Payments are not configured on the server yet.' });
         const input = await body(req);
-        const method = input.method || 'bank';
+        const phone = normalizePhone(input.phone) || registrant.phone;
+        if (!phone) return json(res, 400, { error: 'Enter a valid M-Pesa phone number.' });
         const reference = `FX-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
-        const mpesaNumber = '0114097747';
         const payload = {
           api_key: apiKey,
           business_id: businessId,
           email,
           amount: '2000',
-          phone: method === 'mpesa_phone' ? mpesaNumber : registrant.phone,
+          phone,
           reference,
           till_number: tillNumber,
           payment_method: 'mpesa'
@@ -244,14 +244,18 @@ if (req.method === 'POST' && url.pathname === '/api/payments/stkpush') {
         console.log('Paywave STK Push parsed response:', result);
         const isSuccess = isPaywaveSuccess(response, result);
         if (!isSuccess) {
-          let errorMsg = result.message || result.error || result.errorMessage || result.raw || 'The payment provider could not start the STK Push. Try again later.';
-          if (result.raw && (result.raw.includes('404 Not Found') || result.raw.includes('Access denied by Imunify360') || result.raw.includes('Imunify360'))) {
-            errorMsg = 'Payment provider endpoint blocked (Imunify360). Server IP needs to be whitelisted in Paywave firewall. Contact support.';
+          let errorMsg = result.message || result.error || result.errorMessage || 'The payment provider could not start the STK Push. Try again later.';
+          if (result.raw) {
+            if (result.raw.includes('404 Not Found') || result.raw.includes('Imunify360')) {
+              errorMsg = 'Payment provider blocked this server. Contact support.';
+            } else {
+              errorMsg = 'Payment provider returned an unexpected response. Try again later.';
+            }
           }
           return json(res, 502, { error: errorMsg });
         }
         await updateRegistrationPayment(registrant.id, 'pending', reference, result.transaction_id || result.request_id || result.transaction_request_id || null);
-        return json(res, 200, { message: result.message || 'STK Push request sent. Check your phone and complete the M-Pesa prompt.', reference, transactionRequestId: result.transaction_id || result.request_id || result.transaction_request_id || null, method });
+        return json(res, 200, { message: result.message || 'STK Push request sent. Check your phone and complete the M-Pesa prompt.', reference, transactionRequestId: result.transaction_id || result.request_id || result.transaction_request_id || null });
       } catch (error) {
         const message = error.name === 'AbortError' ? 'Request timed out. Please try again.' : error.name === 'TimeoutError' ? 'The payment provider did not respond in time. Check your phone before retrying.' : 'Unable to reach the payment provider. Please try again later.';
         return json(res, 502, { error: message });
