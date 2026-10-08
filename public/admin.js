@@ -17,6 +17,9 @@ async function loadSettings() {
     $('#siteTagline').value = s.siteTagline || '';
     $('#paymentAmount').value = s.paymentAmount || '';
     $('#announcement').value = s.announcement || '';
+    $('#oandaApiKey').value = s.oandaApiKey || '';
+    $('#oandaAccountId').value = s.oandaAccountId || '';
+    $('#oandaEnv').value = s.oandaEnv || 'practice';
   } catch (error) {
     if (/sign-in/i.test(error.message)) { showDash(false); return; }
     $('#settingsMessage').textContent = error.message;
@@ -54,11 +57,17 @@ $('#settingsForm').addEventListener('submit', async event => {
       siteTitle:$('#siteTitle').value,
       siteTagline:$('#siteTagline').value,
       paymentAmount:$('#paymentAmount').value,
-      announcement:$('#announcement').value
+      announcement:$('#announcement').value,
+      oandaApiKey:$('#oandaApiKey').value,
+      oandaAccountId:$('#oandaAccountId').value,
+      oandaEnv:$('#oandaEnv').value
     }) });
     message.textContent = 'Saved. Changes are live on the website.';
     message.className = 'admin-msg';
     $('#paymentAmount').value = result.settings.paymentAmount;
+    $('#oandaApiKey').value = result.settings.oandaApiKey || '';
+    $('#oandaAccountId').value = result.settings.oandaAccountId || '';
+    $('#oandaEnv').value = result.settings.oandaEnv || 'practice';
   } catch (error) {
     message.className = 'admin-msg error';
     message.textContent = error.message;

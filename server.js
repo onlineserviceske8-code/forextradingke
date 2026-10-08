@@ -24,6 +24,7 @@ const {
 const academyModules = require('./lib/academy-content');
 const quizContent = require('./lib/quiz-content');
 const withQuiz = mods => mods.map(m => ({ ...m, lessons: m.lessons.map(l => ({ ...l, quiz: quizContent[l.title] || null })) }));
+const oanda = require('./lib/oanda');
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC = path.join(__dirname, 'public');
@@ -183,9 +184,16 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname.startsWith('/api/')) {
     if (req.method === 'GET' && url.pathname === '/api/markets') {
       const now = Date.now();
+      let live = null;
+      try { live = await oanda.getPricing(await readSettings()); } catch {}
       return json(res, 200, { asOf: now, markets: pairs.map((p, i) => {
         const pulse = Math.sin(now / 70000 + i * 2.3) * 0.000035 + Math.sin(now / 17000 + i) * 0.000012;
-        return { ...p, price: +(p.price + pulse).toFixed(p.quote === 'JPY' ? 3 : 5), change: +(p.change + Math.sin(now / 100000 + i) * 0.025).toFixed(2) };
+        const market = { ...p, price: +(p.price + pulse).toFixed(p.quote === 'JPY' ? 3 : 5), change: +(p.change + Math.sin(now / 100000 + i) * 0.025).toFixed(2) };
+        if (live && live[p.symbol]) {
+          market.price = +live[p.symbol].mid.toFixed(p.quote === 'JPY' ? 3 : 5);
+          market.spread = +live[p.symbol].spreadPips.toFixed(2);
+        }
+        return market;
       }) });
     }
     if (req.method === 'GET' && url.pathname === '/api/account') {
@@ -223,7 +231,8 @@ const server = http.createServer(async (req, res) => {
     }
     if (url.pathname === '/api/admin/settings' && req.method === 'GET') {
       if (!isAdmin(req)) return json(res, 401, { error:'Admin sign-in required.' });
-      return json(res, 200, { settings: await readSettings() });
+      const s = await readSettings();
+      return json(res, 200, { settings: { ...s, oandaApiKey: oanda.maskKey(s.oandaApiKey) } });
     }
     if (url.pathname === '/api/admin/settings' && req.method === 'PUT') {
       if (!isAdmin(req)) return json(res, 401, { error:'Admin sign-in required.' });
@@ -235,9 +244,12 @@ const server = http.createServer(async (req, res) => {
         const announcement = String(input.announcement ?? current.announcement).trim().slice(0, 200);
         const amountNum = Number(input.paymentAmount ?? current.paymentAmount);
         const paymentAmount = Number.isFinite(amountNum) && amountNum >= 1 && amountNum <= 1000000 ? Math.round(amountNum) : current.paymentAmount;
-        const settings = { siteTitle, siteTagline, paymentAmount, announcement };
+        const oandaApiKey = (input.oandaApiKey === undefined || input.oandaApiKey === '' || String(input.oandaApiKey).trim().startsWith('****')) ? current.oandaApiKey : (String(input.oandaApiKey).trim() === 'CLEAR' ? '' : String(input.oandaApiKey).trim().slice(0, 200));
+        const oandaAccountId = (input.oandaAccountId === undefined || String(input.oandaAccountId).trim() === '') ? current.oandaAccountId : String(input.oandaAccountId).trim().slice(0, 64);
+        const oandaEnv = input.oandaEnv === 'live' ? 'live' : input.oandaEnv === 'practice' ? 'practice' : current.oandaEnv;
+        const settings = { siteTitle, siteTagline, paymentAmount, announcement, oandaApiKey, oandaAccountId, oandaEnv };
         await saveSettings(settings);
-        return json(res, 200, { settings });
+        return json(res, 200, { settings: { ...settings, oandaApiKey: oanda.maskKey(oandaApiKey) } });
       } catch { return json(res, 400, { error:'Unable to save settings.' }); }
     }
     if (req.method === 'GET' && url.pathname === '/api/registration/me') {
@@ -250,6 +262,51 @@ const server = http.createServer(async (req, res) => {
       if (!user) return json(res, 401, { error:'Sign in to access FX Academy.' });
       if (user.paymentStatus !== 'paid') return json(res, 403, { error:'Complete your KES 2,000 payment to unlock FX.' });
       return json(res, 200, { unlocked:true, modules:withQuiz(academyModules) });
+    }
+    const academyAccess = await (async () => {
+      if (isAdmin(req)) return true;
+      const user = await registrationSession(req);
+      return Boolean(user && user.paymentStatus === 'paid');
+    })();
+    if (url.pathname === '/api/oanda/status' && req.method === 'GET') {
+      if (!academyAccess) return json(res, 401, { error:'Sign in to access the demo broker.' });
+      const settings = await readSettings();
+      const cfg = oanda.config(settings);
+      const payload = { configured: Boolean(cfg.apiKey && cfg.accountId), env: cfg.env, accountId: cfg.accountId, error: null, currency:'USD', balance:0, unrealizedPL:0, marginAvailable:0, openTrades:[], history:[] };
+      if (!payload.configured) return json(res, 200, payload);
+      try {
+        const [summary, openTrades, history] = await Promise.all([
+          oanda.getSummary(settings),
+          oanda.getOpenTrades(settings),
+          oanda.getClosedTrades(settings, 20)
+        ]);
+        payload.currency = summary && summary.currency ? summary.currency : 'USD';
+        payload.balance = Number(summary.balance || 0);
+        payload.unrealizedPL = Number(summary.unrealizedPL || 0);
+        payload.marginAvailable = Number(summary.marginAvailable || 0);
+        payload.openTrades = openTrades;
+        payload.history = history;
+      } catch (error) {
+        payload.error = String(error.message || error).slice(0, 200);
+      }
+      return json(res, 200, payload);
+    }
+    if (url.pathname === '/api/oanda/order' && req.method === 'POST') {
+      if (!academyAccess) return json(res, 401, { error:'Sign in to access the demo broker.' });
+      const input = await body(req);
+      try {
+        const result = await oanda.placeOrder(await readSettings(), input.symbol, input.units);
+        return json(res, 200, result);
+      } catch (error) { return json(res, 400, { error: String(error.message || error).slice(0, 200) }); }
+    }
+    if (url.pathname === '/api/oanda/close' && req.method === 'POST') {
+      if (!academyAccess) return json(res, 401, { error:'Sign in to access the demo broker.' });
+      const input = await body(req);
+      if (!input.tradeId) return json(res, 400, { error:'Trade id is required.' });
+      try {
+        const result = await oanda.closeTrade(await readSettings(), input.tradeId);
+        return json(res, 200, result);
+      } catch (error) { return json(res, 400, { error: String(error.message || error).slice(0, 200) }); }
     }
     if (req.method === 'POST' && url.pathname === '/api/login') {
       try {

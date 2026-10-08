@@ -52,22 +52,46 @@
 </div>
 <div id="academySimView" hidden>
 <div class="sim-intro"><b>Risk-free trading simulator</b><p>Practise buying and selling at live market prices with virtual money. The spread is built into every fill, just like a real broker.</p></div>
-<div class="sim-balances">
-<div class="sim-bal"><span>Equity</span><b id="simEquity">$1,000.00</b></div>
-<div class="sim-bal"><span>Cash</span><b id="simCash">$1,000.00</b></div>
-<div class="sim-bal"><span>Floating P&amp;L</span><b id="simFloat">+$0.00</b></div>
-<div class="sim-bal"><span>Realized</span><b id="simRealized">+$0.00</b></div>
+<div class="oanda-panel" id="oandaPanel" hidden>
+  <div class="oanda-head">
+    <div>
+      <b>OANDA Demo Broker</b>
+      <small id="oandaStatusText">Checking connection…</small>
+    </div>
+    <div class="oanda-badges">
+      <span class="oanda-badge" id="oandaEnvBadge">Practice</span>
+      <span class="oanda-badge" id="oandaCfgBadge">Not configured</span>
+    </div>
+  </div>
+  <div class="oanda-balances">
+    <div class="oanda-bal"><span>Balance</span><b id="oandaBalance">—</b></div>
+    <div class="oanda-bal"><span>Unrealized P/L</span><b id="oandaUPL">—</b></div>
+    <div class="oanda-bal"><span>Margin available</span><b id="oandaMargin">—</b></div>
+    <div class="oanda-bal"><span>Live spread</span><b id="oandaSpread">— pips</b></div>
+  </div>
+  <div class="oanda-grid">
+    <section class="oanda-col">
+      <h4>Place Market Order</h4>
+      <div class="sim-field"><label for="simPair">Pair</label><select id="simPair"><option>Loading…</option></select></div>
+      <div class="sim-field"><label for="simDir">Direction</label><select id="simDir"><option value="long">Buy (long)</option><option value="short">Sell (short)</option></select></div>
+      <div class="sim-field"><label for="simUnits">Units</label><input id="simUnits" type="number" inputmode="numeric" value="1000" min="10" step="10" placeholder="e.g. 1000"></div>
+      <button type="button" class="sim-open" id="oandaOpenBtn">Send market order</button>
+      <p class="oanda-hint">Virtual balance here is separate; OANDA demo uses your practice account.</p>
+    </section>
+    <section class="oanda-col">
+      <h4>Open trades</h4>
+      <div id="oandaOpenList" class="oanda-list">No open trades.</div>
+      <h4 style="margin-top:12px">Recent closed</h4>
+      <div id="oandaHistory" class="oanda-list">No history.</div>
+    </section>
+  </div>
 </div>
-<form id="simForm" autocomplete="off" class="sim-form">
-<div class="sim-field"><label for="simPair">Pair</label><select id="simPair"><option>Loading…</option></select></div>
-<div class="sim-field"><label for="simDir">Direction</label><select id="simDir"><option value="long">Buy (long)</option><option value="short">Sell (short)</option></select></div>
-<div class="sim-field"><label for="simSize">Size (virtual USD)</label><div class="sim-size-control"><input id="simSize" type="number" min="10" step="10" value="500" inputmode="numeric"><span class="sim-quick"><button type="button" data-size="100">100</button><button type="button" data-size="500">500</button><button type="button" data-size="1000">1,000</button></span></div></div>
-<button class="sim-open" type="submit">Open position</button>
+<form id="simForm" autocomplete="off" class="sim-form" hidden>
+  <div class="sim-field"><label for="simPair2">Pair</label><select id="simPair2"><option>Loading…</option></select></div>
+  <div class="sim-field"><label for="simDir2">Direction</label><select id="simDir2"><option value="long">Buy (long)</option><option value="short">Sell (short)</option></select></div>
+  <div class="sim-field"><label for="simSize">Size (virtual USD)</label><div class="sim-size-control"><input id="simSize" type="number" min="10" step="10" value="500" inputmode="numeric"><span class="sim-quick"><button type="button" data-size="100">100</button><button type="button" data-size="500">500</button><button type="button" data-size="1000">1,000</button></span></div></div>
+  <button class="sim-open" type="submit">Open virtual trade</button>
 </form>
-<h4 class="sim-title">Open positions</h4>
-<div id="simPositions"></div>
-<h4 class="sim-title">Trading history</h4>
-<div id="simHistory"></div>
 </div>
       </section>
       <section class="stats-grid" aria-label="Market summary">

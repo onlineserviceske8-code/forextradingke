@@ -52,6 +52,18 @@
             <input id="paymentAmount" name="paymentAmount" type="number" min="1" max="1000000" step="1">
             <label for="announcement">Announcement banner (optional)</label>
             <textarea id="announcement" name="announcement" rows="3" maxlength="200" placeholder="Leave blank to hide the banner"></textarea>
+            <h2 style="margin:20px 0 8px;font-size:15px">OANDA Demo (real prices)</h2>
+            <p class="admin-sub" style="margin:-2px 0 8px">Practice API keys only. Leave blank to keep simulated prices.</p>
+            <label for="oandaApiKey">OANDA API Key (practice)</label>
+            <input id="oandaApiKey" name="oandaApiKey" type="password" autocomplete="off" placeholder="e.g. 5ba7b...">
+            <label for="oandaAccountId">OANDA Account ID (practice)</label>
+            <input id="oandaAccountId" name="oandaAccountId" placeholder="e.g. 101-001-1234567-001">
+            <label for="oandaEnv">Environment</label>
+            <select id="oandaEnv" name="oandaEnv" style="height:44px;border:1px solid var(--line,#e2e8de);border-radius:6px;padding:0 12px;background:#fff">
+              <option value="practice">Practice (demo)</option>
+              <option value="live">Live (avoid unless authorized)</option>
+            </select>
+            <p class="admin-sub" style="margin:4px 0 0;font-size:11px;color:#9aa49a">To clear the key, type <b>CLEAR</b> and save. Saved keys are masked.</p>
             <div class="admin-actions">
               <button type="submit" class="admin-primary">Save changes</button>
               <button type="button" class="admin-ghost" id="reloadButton">Reload</button>
