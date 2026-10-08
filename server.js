@@ -154,43 +154,40 @@ if (req.method === 'POST' && url.pathname === '/api/payments/stkpush') {
       try {
         const registrant = await registrationSession(req);
         if (!registrant) return json(res, 401, { error:'Register first to continue to payment.' });
-        const apiKey = process.env.PAYWAVE_API_KEY;
-        const email = process.env.PAYWAVE_EMAIL;
-        const tillNumber = process.env.PAYWAVE_TILL_NUMBER || '6446427';
-        if (!apiKey || !email) return json(res, 503, { error:'Payments are not configured on the server yet.' });
+        const apiKey = process.env.LIPAWIN_API_KEY;
+        const businessId = process.env.LIPAWIN_BUSINESS_ID;
+        if (!apiKey || !businessId) return json(res, 503, { error:'Payments are not configured on the server yet.' });
         const input = await body(req);
         const phone = normalizePhone(input.phone) || registrant.phone;
         if (!phone) return json(res, 400, { error: 'Enter a valid M-Pesa phone number.' });
         const reference = `FX-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
         const payload = {
-          api_key: apiKey,
-          email,
-          amount: '2000',
+          amount: 2000,
           msisdn: phone,
-          reference,
-          till_number: tillNumber
+          business_id: Number(businessId),
+          reference
         };
-        console.log('Paywave STK Push payload:', JSON.stringify(payload));
+        console.log('LipaWin STK Push payload:', JSON.stringify(payload));
         const ctrl = new AbortController();
         const to = setTimeout(() => ctrl.abort(), 15000);
-        const response = await fetch('https://paywavexpress.co.ke/v1/stkpush', {
+        const response = await fetch('https://lipawin.com/api/stk_push.php', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-Api-Key': apiKey },
           body: JSON.stringify(payload),
           signal: ctrl.signal
         });
         clearTimeout(to);
         const responseText = await response.text();
-        console.log('Paywave response:', response.status, responseText);
+        console.log('LipaWin response:', response.status, responseText);
         let result = {};
         try { result = JSON.parse(responseText); } catch { result = {}; }
-        const isSuccess = isPaywaveSuccess(response, result);
+        const isSuccess = response.ok && (result.success === true || result.success === 1 || result.status === 'success');
         if (!isSuccess) {
-          const errorMsg = result.errorMessage || result.message || result.ResponseDescription || result.responseDescription || 'The payment provider could not start the STK Push. Try again later.';
+          const errorMsg = result.message || result.error || result.ResponseDescription || 'The payment provider could not start the STK Push. Try again later.';
           return json(res, 502, { error: errorMsg });
         }
-        await updateRegistrationPayment(registrant.id, 'pending', reference, result.transaction_request_id || null);
-        return json(res, 200, { message: result.message || 'STK Push request sent. Check your phone and complete the M-Pesa prompt.', reference, transactionRequestId: result.transaction_request_id || null });
+        await updateRegistrationPayment(registrant.id, 'pending', reference, result.transaction_id || null);
+        return json(res, 200, { message: result.message || 'STK Push request sent. Check your phone and complete the M-Pesa prompt.', reference, transactionRequestId: result.transaction_id || null });
       } catch (error) {
         const message = error.name === 'AbortError' ? 'Request timed out. Please try again.' : error.name === 'TimeoutError' ? 'The payment provider did not respond in time. Check your phone before retrying.' : 'Unable to reach the payment provider. Please try again later.';
         return json(res, 502, { error: message });
