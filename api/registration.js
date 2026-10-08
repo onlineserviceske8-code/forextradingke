@@ -184,7 +184,7 @@ module.exports = async (req, res) => {
       const apiKey = process.env.PAYWAVE_API_KEY;
       const email = process.env.PAYWAVE_EMAIL;
       if (!apiKey || !email) return res.status(503).json({ error: 'Payments are not configured on the server yet.' });
-      const phone = registrant.phone;
+      const phone = normalizePhone(req.body.phone) || registrant.phone;
       const reference = `FX-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
       const tillNumber = process.env.PAYWAVE_TILL_NUMBER || '6446427';
       function isPaywaveSuccess(response, result) {
