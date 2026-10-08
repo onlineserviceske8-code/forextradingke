@@ -11,3 +11,135 @@
 .page-footer i{background:#a6aea8}
 .profile{display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:6px;color:#dce4de;background:#1a2620;text-decoration:none;border:1px solid #27332e;margin-top:auto}.profile:hover{background:#22312a}.avatar{width:28px;height:28px;border-radius:50%;background:#263a31;display:grid;place-items:center;font:700 10px var(--display);color:#b7df78}.profile b{font-size:11px}.profile small{font-size:10px;color:#839088}.more{margin-left:auto;color:#66736b;font-size:16px}.sidebar-bottom{position:relative}.account-menu{position:absolute;bottom:70px;left:16px;right:16px;background:#1a2620;border:1px solid #27332e;border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:8px;z-index:10}.account-menu span{font-size:11px;color:#839088}.account-menu button{width:100%;text-align:left;padding:8px 10px;border-radius:4px;background:transparent;color:#dce4de;font-size:11px;border:1px solid #27332e}.account-menu button:hover{background:#22312a}
 @media(max-width:850px){.profile{padding:8px}.avatar{width:24px;height:24px}.profile b,.profile small{display:none}.more{display:none}.account-menu{left:8px;right:8px;bottom:60px}}
+
+/* ===== ANDROID / MOBILE ===== */
+@media(max-width:768px){
+  html{font-size:16px;-webkit-text-size-adjust:100%}
+  body{font-size:15px;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+  button,input,select,textarea{font-size:16px!important;min-height:44px}
+  .sidebar{
+    position:fixed;top:auto;bottom:0;left:0;right:0;width:100%;height:58px;
+    flex-direction:row;align-items:center;padding:0;
+    border-top:1px solid #27332e;z-index:100;
+    box-shadow:0 -2px 10px rgba(0,0,0,.3)
+  }
+  .sidebar .brand,.sidebar .workspace,.sidebar .nav-label,.sidebar .sidebar-bottom{display:none}
+  .sidebar .main-nav{display:flex;flex:1;justify-content:space-around;margin:0!important;gap:0}
+  .sidebar .nav-item{
+    flex-direction:column;justify-content:center;gap:2px;
+    width:auto!important;height:58px;padding:0 8px;
+    font-size:10px!important;color:#8a9690;border-radius:0;
+    background:transparent!important;box-shadow:none!important
+  }
+  .sidebar .nav-item.active{color:#b6df77!important;box-shadow:none!important;background:rgba(182,223,119,.08)!important}
+  .sidebar .nav-ico{font-size:20px!important}
+  .main-area{margin-left:0!important;padding-bottom:70px}
+  .topbar{padding:0 14px!important;height:52px!important}
+  .page-wrap{padding:14px 12px!important}
+  .welcome-row h1{font-size:24px!important}
+  .welcome-copy{font-size:13px!important}
+  .date-button{font-size:12px!important;padding:8px 10px!important;min-height:40px}
+  .onboarding-grid{grid-template-columns:1fr!important;gap:10px!important}
+  .onboarding-card{flex-direction:column;min-height:auto!important;padding:16px 14px!important;gap:8px}
+  .onboarding-number{font-size:14px!important}
+  .onboarding-content h2{font-size:18px!important}
+  .onboarding-content p{font-size:13px!important;line-height:1.6}
+  .onboarding-icon{display:none}
+  .section-kicker{font-size:11px!important;letter-spacing:.8px!important}
+  .payment-form label{font-size:13px!important;margin:12px 0 6px!important}
+  .payment-form input{
+    width:100%!important;height:46px!important;
+    font-size:16px!important;padding:0 12px!important;
+    border-radius:8px!important;border:1.5px solid #d7ddd4!important
+  }
+  .payment-form input:focus{border-color:#4a7a50!important;box-shadow:0 0 0 2px rgba(74,122,80,.15)}
+  .onboarding-cta{
+    width:100%!important;height:48px!important;
+    justify-content:center!important;font-size:15px!important;
+    border-radius:8px!important;margin-top:10px!important;
+    font-weight:600!important
+  }
+  .deposit-amount b{font-size:28px!important}
+  .deposit-amount span{font-size:13px!important}
+  .deposit-amount small{font-size:12px!important}
+  .payment-message{font-size:13px!important;min-height:18px}
+  .payer-summary{font-size:13px!important}
+  .account-switch{font-size:13px!important}
+  .account-switch button{font-size:14px!important;min-height:44px;padding:0 8px}
+  .funding-note{font-size:12px!important;line-height:1.7!important}
+  .stats-grid{grid-template-columns:1fr 1fr!important;gap:8px!important}
+  .stat-card{height:auto!important;min-height:100px;padding:14px!important}
+  .stat-card:last-child{grid-column:span 2}
+  .stat-value{font-size:24px!important}
+  .stat-head span{font-size:13px!important}
+  .stat-foot .stat-context{font-size:11px!important}
+  .content-grid,.lower-grid{grid-template-columns:1fr!important;gap:12px!important}
+  .panel{padding:16px 14px!important}
+  .panel-title-row h2{font-size:17px!important}
+  .chart-toolbar{flex-direction:column!important;gap:8px!important}
+  .time-controls{position:static!important;display:flex;gap:6px;flex-wrap:wrap}
+  .time-controls button{min-height:36px;padding:0 12px!important;font-size:13px!important;border-radius:6px}
+  .chart-price{font-size:22px!important;margin-left:0!important}
+  .chart-change{font-size:14px!important}
+  .chart-footer{font-size:11px!important;flex-wrap:wrap;gap:8px!important}
+  .chart-footer span{font-size:11px!important}
+  .chart-plot{min-height:200px}
+  .markets-header{display:block!important;padding-bottom:10px}
+  .market-actions{display:flex!important;flex-wrap:wrap;gap:8px!important;margin-top:10px!important}
+  .search-box{width:100%!important;min-height:44px}
+  .search-box input{font-size:16px!important;height:44px!important;width:100%!important}
+  .filter-btn,.all-markets-btn{min-height:42px;padding:0 14px!important;font-size:13px!important;border-radius:6px}
+  .table-tabs{gap:6px!important;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+  .table-tabs .tab{min-height:40px;padding:0 14px!important;font-size:13px!important;white-space:nowrap}
+  .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -14px;padding:0 14px}
+  .table-scroll table{min-width:600px}
+  .table-scroll th{font-size:11px!important;padding:8px 6px!important;white-space:nowrap}
+  .table-scroll td{font-size:13px!important;padding:10px 6px!important}
+  .instrument-name b{font-size:13px!important}
+  .instrument-name small{font-size:11px!important}
+  .row-star{min-width:40px!important;min-height:40px!important;font-size:18px!important}
+  .table-bottom{font-size:12px!important;padding-top:10px}
+  .table-bottom button{min-height:40px;font-size:13px!important}
+  .convert-fields{grid-template-columns:1fr!important;gap:10px!important}
+  .swap-btn{width:44px!important;height:44px!important;justify-self:center;font-size:18px!important;border-radius:50%!important}
+  .amount-field{padding:10px!important}
+  .amount-field span{font-size:11px!important}
+  .amount-field input{font-size:18px!important;height:44px!important}
+  .amount-field select{font-size:16px!important;min-height:40px!important;padding:6px!important}
+  .rate-note{font-size:12px!important}
+  .rate-note button{min-width:40px;min-height:40px}
+  .movers-panel .pulse-summary span{font-size:13px!important}
+  .mover-row{padding:10px 0!important}
+  .mover-pair{font-size:14px!important}
+  .mover-price{font-size:15px!important}
+  .mover-change{font-size:14px!important}
+  .page-footer{font-size:12px!important;padding:14px 0!important}
+  .toast{
+    left:12px!important;right:12px!important;
+    bottom:70px!important;top:auto!important;
+    text-align:center;font-size:14px!important;
+    padding:12px 16px!important;border-radius:8px!important
+  }
+  .account-menu{bottom:66px!important;left:12px!important;right:12px!important}
+  .account-menu span{font-size:13px!important}
+  .account-menu button{min-height:44px;font-size:14px!important}
+  .help-card{display:none}
+  .chart-panel{min-height:320px!important}
+  .movers-panel{min-height:auto!important}
+  .expand-chart{display:none!important}
+  .live-label,.indicative-label{font-size:11px!important}
+  .market-count{font-size:12px!important}
+  .eyebrow{font-size:11px!important}
+}
+@media(max-width:400px){
+  .page-wrap{padding:10px 8px!important}
+  .panel{padding:12px 10px!important}
+  .stats-grid{gap:6px!important}
+  .stat-card{padding:10px!important;min-height:90px}
+  .stat-value{font-size:20px!important}
+  .welcome-row h1{font-size:20px!important}
+  .onboarding-content h2{font-size:16px!important}
+  .onboarding-cta{font-size:14px!important;height:46px!important}
+  .payment-form input{height:44px!important;font-size:16px!important}
+  .table-scroll{margin:0 -10px;padding:0 10px}
+}
