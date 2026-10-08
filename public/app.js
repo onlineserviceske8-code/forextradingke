@@ -46,9 +46,19 @@ function academyVideo(lesson, index) {
   const autoplay = index === 0 ? '&autoplay=1&mute=1' : '';
   return `<div class="academy-video"><iframe src="https://www.youtube-nocookie.com/embed/${lesson.video}?rel=0${autoplay}&playsinline=1&modestbranding=1" title="${escapeHtml(lesson.title)}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`;
 }
+function formatLesson(raw) {
+  return String(raw).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').split(/\n{2,}/).map(block => {
+    if (/^-\s/m.test(block)) {
+      const items = block.split('\n').filter(line => line.trim() !== '');
+      return `<ul class="academy-body-list">${items.map(it => `<li>${it.replace(/^-\s+/, '')}</li>`).join('')}</ul>`;
+    }
+    return `<p>${block.replace(/\n/g, ' ')}</p>`;
+  }).join('');
+}
 function academyLessonRow(lesson, index) {
   const learn = lesson.objective ? `<div class="academy-learn"><span class="academy-learn-label">What you'll learn</span><p class="academy-lesson-learn">${lesson.objective}</p></div>` : '';
-  return `<li class="academy-lesson"><span class="academy-lesson-no">${String(index + 1).padStart(2, '0')}</span><div class="academy-lesson-body"><div class="academy-lesson-top"><span class="academy-lesson-title"><b>${escapeHtml(lesson.title)}</b><small>${lesson.minutes} min</small></span><span class="academy-check" aria-hidden="true">✓</span></div>${learn}${academyVideo(lesson, index)}</div></li>`;
+  const body = lesson.body ? `<div class="academy-body">${formatLesson(lesson.body)}</div>` : '';
+  return `<li class="academy-lesson"><span class="academy-lesson-no">${String(index + 1).padStart(2, '0')}</span><div class="academy-lesson-body"><div class="academy-lesson-top"><span class="academy-lesson-title"><b>${escapeHtml(lesson.title)}</b><small>${lesson.minutes} min read</small></span><span class="academy-check" aria-hidden="true">✓</span></div>${learn}${body}${academyVideo(lesson, index)}</div></li>`;
 }
 function renderAcademy(modules){const totalLessons=modules.reduce((n,m)=>n+m.lessons.length,0),totalMin=modules.reduce((n,m)=>n+m.lessons.reduce((s,l)=>s+l.minutes,0),0);$('#academyStats').innerHTML=`<div class="academy-stat"><b>${modules.length}</b><span>Modules</span></div><div class="academy-stat"><b>${totalLessons}</b><span>Lessons</span></div><div class="academy-stat"><b>${Math.round(totalMin/60*10)/10}h</b><span>Total time</span></div><div class="academy-stat"><b>Lifetime</b><span>Access</span></div>`;$('#academyModules').innerHTML=modules.map((m,i)=>`<article class="academy-module"><header class="academy-module-head"><div class="academy-module-no">${String(i+1).padStart(2,'0')}</div><div class="academy-module-title"><h3>${escapeHtml(m.title)}</h3><p>${escapeHtml(m.summary)}</p></div><div class="academy-module-meta"><span class="academy-level">${escapeHtml(m.level)}</span><small>${m.lessons.length} lessons · ${m.duration}</small></div></header><ul class="academy-lessons">${m.lessons.map((l,j)=>academyLessonRow(l,j)).join('')}</ul></article>`).join('');}
 let academyLoaded=false,academyLoading=false;
