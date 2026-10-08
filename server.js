@@ -364,7 +364,7 @@ if (req.method === 'POST' && url.pathname === '/api/payments/stkpush') {
   if (!file.startsWith(PUBLIC + path.sep)) { res.writeHead(403); return res.end('Forbidden'); }
   fs.readFile(file, (error, content) => {
     if (error) { res.writeHead(404, { 'Content-Type':'text/plain; charset=utf-8', ...securityHeaders }); return res.end('Not found'); }
-    const csp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'";
+    const csp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; frame-src https://www.youtube-nocookie.com https://www.youtube.com; connect-src 'self'";
     res.writeHead(200, { 'Content-Type':mime[path.extname(file)] || 'application/octet-stream', 'Cache-Control':'no-cache', 'Content-Security-Policy':csp, ...securityHeaders }); res.end(content);
   });
 });
