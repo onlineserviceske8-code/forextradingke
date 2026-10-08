@@ -9,6 +9,7 @@
 .registration-form input{margin-bottom:5px}.registration-form button:disabled{opacity:.6;cursor:wait}.payer-summary{font-size:9px!important;color:#65766a!important;margin:5px 0 9px!important}
 
 .page-footer i{background:#a6aea8}
+.hamburger{display:none}
 .profile{display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:6px;color:#dce4de;background:#1a2620;text-decoration:none;border:1px solid #27332e;margin-top:auto}.profile:hover{background:#22312a}.avatar{width:28px;height:28px;border-radius:50%;background:#263a31;display:grid;place-items:center;font:700 10px var(--display);color:#b7df78}.profile b{font-size:11px}.profile small{font-size:10px;color:#839088}.more{margin-left:auto;color:#66736b;font-size:16px}.sidebar-bottom{position:relative}.account-menu{position:absolute;bottom:70px;left:16px;right:16px;background:#1a2620;border:1px solid #27332e;border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:8px;z-index:10}.account-menu span{font-size:11px;color:#839088}.account-menu button{width:100%;text-align:left;padding:8px 10px;border-radius:4px;background:transparent;color:#dce4de;font-size:11px;border:1px solid #27332e}.account-menu button:hover{background:#22312a}
 @media(max-width:850px){.profile{padding:8px}.avatar{width:24px;height:24px}.profile b,.profile small{display:none}.more{display:none}.account-menu{left:8px;right:8px;bottom:60px}}
 
@@ -17,30 +18,61 @@
   html{font-size:16px;-webkit-text-size-adjust:100%}
   body{font-size:15px;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
   button,input,select,textarea{font-size:16px!important;min-height:44px}
+  body.drawer-open{overflow:hidden}
   .sidebar{
-    position:fixed;top:auto;bottom:0;left:0;right:0;width:100%;height:60px;
-    flex-direction:row;align-items:center;justify-content:flex-start;
-    padding:0 4px;gap:0;
-    border-top:1px solid #27332e;z-index:100;
-    box-shadow:0 -2px 10px rgba(0,0,0,.3);
-    overflow-x:auto;-webkit-overflow-scrolling:touch
+    position:fixed;top:0;left:0;bottom:0;width:260px!important;height:100%;
+    flex-direction:column;justify-content:flex-start;
+    padding:20px 15px 14px;gap:0;
+    transform:translateX(-100%);transition:transform .25s ease;
+    z-index:200;border-right:1px solid #27332e;
+    box-shadow:none;overflow-y:auto;-webkit-overflow-scrolling:touch
   }
-  .sidebar .brand,.sidebar .workspace,.sidebar .nav-label,.sidebar .sidebar-bottom{display:none!important}
-  .sidebar .main-nav{display:flex;flex:0 0 auto;flex-direction:row;margin:0!important;gap:0}
-  .sidebar .main-nav+.main-nav{border-left:1px solid #27332e}
+  .sidebar.open{transform:translateX(0);box-shadow:4px 0 20px rgba(0,0,0,.4)}
+  .sidebar .brand{display:flex!important;font-size:20px!important;gap:10px!important;padding:0 8px!important}
+  .sidebar .brand>span:last-child{font-size:20px!important}
+  .sidebar .brand-mark{flex:none!important}
+  .sidebar .workspace{display:flex!important;margin:20px 1px 16px!important}
+  .sidebar .nav-label{display:block!important;font-size:11px!important}
+  .sidebar .main-nav{display:grid!important;flex-direction:column!important;gap:3px!important;margin:0!important}
   .sidebar .nav-item{
-    flex-direction:column;justify-content:center;align-items:center;gap:3px;
-    width:58px!important;min-width:58px;height:60px;padding:0 2px;
-    font-size:10px!important;font-weight:500;color:#8a9690;border-radius:0;
-    background:transparent!important;box-shadow:none!important;
-    text-align:center;line-height:1.1;white-space:nowrap;overflow:hidden;
+    flex-direction:row!important;justify-content:flex-start!important;align-items:center!important;
+    width:100%!important;height:44px!important;padding:0 12px!important;
+    font-size:14px!important;font-weight:500!important;color:#aab4ad!important;
+    border-radius:6px!important;background:transparent!important;box-shadow:none!important;
+    gap:12px!important;text-align:left!important;white-space:nowrap;
     font-family:var(--font)!important
   }
-  .sidebar .nav-item.active{color:#b6df77!important;box-shadow:none!important;background:rgba(182,223,119,.08)!important}
-  .sidebar .nav-ico{font-size:20px!important;line-height:1}
-  .sidebar .nav-pill,.sidebar .soon-pill,.sidebar .tools-label{display:none!important}
-  .main-area{margin-left:0!important;padding-bottom:76px}
-  .topbar{padding:0 14px!important;height:52px!important}
+  .sidebar .nav-item.active{
+    color:#eff6ee!important;background:#222e29!important;
+    box-shadow:inset 2px 0 #b6df77!important
+  }
+  .sidebar .nav-ico{font-size:18px!important;width:22px;text-align:center}
+  .sidebar .nav-pill{display:inline!important;margin-left:auto;font-size:11px!important;padding:1px 7px!important;border-radius:10px;background:#222e29;color:#8a9690}
+  .sidebar .tools-label{display:block!important}
+  .sidebar .soon-pill{display:inline!important;margin-left:auto;font-size:9px!important;padding:2px 6px!important;border-radius:8px;background:#2a3d33;color:#b6df77}
+  .sidebar .sidebar-bottom{display:block!important;margin-top:auto;padding-top:16px}
+  .sidebar .help-card{display:block!important}
+  .sidebar .profile{display:flex!important;padding:10px 8px!important}
+  .sidebar .profile b,.sidebar .profile small{display:block!important}
+  .sidebar .avatar{width:28px!important;height:28px!important}
+  .sidebar .more{display:block!important}
+  .sidebar-backdrop{
+    position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:190;
+    display:block;animation:fadeIn .2s ease
+  }
+  .sidebar-backdrop[hidden]{display:none}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .hamburger{
+    display:flex!important;flex-direction:column;justify-content:center;align-items:center;
+    gap:5px;width:44px;height:44px;background:none;border:none;
+    padding:0;cursor:pointer;flex-shrink:0;margin-right:6px
+  }
+  .hamburger span{
+    display:block;width:22px;height:2px;background:var(--ink);
+    border-radius:2px;transition:transform .2s,opacity .2s
+  }
+  .main-area{margin-left:0!important;padding-bottom:20px}
+  .topbar{padding:0 12px!important;height:54px!important;display:flex!important;align-items:center!important}
   .page-wrap{padding:14px 12px!important}
   .welcome-row{display:flex!important;align-items:center!important;justify-content:space-between}
   .welcome-row h1{font-size:24px!important}
@@ -136,7 +168,7 @@
   .page-footer{font-size:12px!important;padding:14px 0!important}
   .toast{
     left:12px!important;right:12px!important;
-    bottom:76px!important;top:auto!important;
+    bottom:20px!important;top:auto!important;
     text-align:center;font-size:14px!important;
     padding:12px 16px!important;border-radius:8px!important;
     z-index:200!important
@@ -144,7 +176,6 @@
   .account-menu{bottom:70px!important;left:12px!important;right:12px!important}
   .account-menu span{font-size:13px!important}
   .account-menu button{min-height:44px;font-size:14px!important}
-  .help-card{display:none}
   .chart-panel{min-height:320px!important}
   .movers-panel{min-height:auto!important}
   .expand-chart{display:none!important}
