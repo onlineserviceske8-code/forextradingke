@@ -42,9 +42,9 @@ function unlockFullAccess(registration){currentUserId=registration.id||'guest';$
 let authMode='register';
 function applySettings(s){siteSettings={...siteSettings,...s};const amount=Number(siteSettings.paymentAmount).toLocaleString('en-US');document.title=`${siteSettings.siteTitle} — Market overview`;$('#heroTitle').textContent=siteSettings.siteTitle;$('#heroCopy').textContent=siteSettings.siteTagline;$('#registerHeading').textContent=`Create account & pay KES ${amount}`;$('#paymentHeading').textContent=`Pay KES ${amount} via M-Pesa`;$('#depositAmount').textContent=amount;const banner=$('#announcement');if(siteSettings.announcement){banner.textContent=siteSettings.announcement;banner.hidden=false;}else{banner.hidden=true;}const locked=$('#academyLocked');if(locked)locked.textContent=`Complete your KES ${amount} payment to unlock FX.`;}
 function academyVideo(lesson, index) {
-  if (!lesson.video) return '';
+  if (!(lesson.video&&lesson.video.url)||lesson.video) return '';
   const autoplay = index === 0 ? '&autoplay=1&mute=1' : '';
-  return `<div class="academy-video"><iframe src="https://www.youtube-nocookie.com/embed/${lesson.video}?rel=0${autoplay}&playsinline=1&modestbranding=1" title="${escapeHtml(lesson.title)}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`;
+  return `<div class="academy-video"><iframe src="https://www.youtube-nocookie.com/embed/${(lesson.video&&lesson.video.url)||lesson.video}?rel=0${autoplay}&playsinline=1&modestbranding=1" title="${escapeHtml(lesson.title)}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`;
 }
 function formatLesson(raw) {
   return String(raw).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').split(/\n{2,}/).map(block => {
